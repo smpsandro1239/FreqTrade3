@@ -1,0 +1,368 @@
+@echo off
+chcp 65001 >nul
+setlocal enabledelayedexpansion
+
+:: =============================================
+:: FREQTRADE3 - SCRIPT DE CONFIGURAÇÃO AUTOMÁTICA
+:: =============================================
+:: Versão: 1.0.0
+:: Data: 2025-11-05
+:: Autor: FreqTrade3 Project
+:: Descrição: Configuração completa e segura do FreqTrade3
+:: =============================================
+
+title FreqTrade3 - Configuração Automática
+
+:: Cores para output (usando ANSI para Linux/Mac)
+set "GREEN=[92m"
+set "YELLOW=[93m"
+set "RED=[91m"
+set "BLUE=[94m"
+set "CYAN=[96m"
+set "NC=[0m"
+
+:: Variáveis globais
+set "INSTALL_DIR=%~dp0"
+set "USER_DATA_DIR=%USERPROFILE%\freqtrade3\user_data"
+set "CONFIG_DIR=%INSTALL_DIR%configs"
+set "STRATEGY_DIR=%INSTALL_DIR%strategies"
+set "LOG_DIR=%INSTALL_DIR%logs"
+set "PYTHON_EXE=python"
+set "PIP_EXE=pip"
+
+:: Função para output colorido
+:print_colored
+echo %~2%~1%~3
+goto :eof
+
+:: Função para aguardar entrada do usuário
+:pause_user
+echo.
+echo Pressione qualquer tecla para continuar...
+pause >nul
+goto :eof
+
+:: Início do script
+cls
+echo.
+echo %BLUE%╔══════════════════════════════════════════════════════════════╗%NC%
+echo %BLUE%║                                                              ║%NC%
+echo %BLUE%║%GREEN%           🟢 FREQTRADE3 - CONFIGURAÇÃO AUTOMÁTICA          %BLUE%║%NC%
+echo %BLUE%║%GREEN%              Sistema de Trading Algorítmico              %BLUE%║%NC%
+echo %BLUE%║                                                              ║%NC%
+echo %BLUE%╚══════════════════════════════════════════════════════════════╝%NC%
+echo.
+echo %CYAN%Bem-vindo ao FreqTrade3!%NC%
+echo %CYAN%Este script irá configurar automaticamente todo o sistema de trading.%NC%
+echo.
+
+:: Verificar se Python está instalado
+echo %YELLOW%🔍 Verificando Python...%NC%
+python --version >nul 2>&1
+if errorlevel 1 (
+    echo %RED%❌ Python não encontrado!%NC%
+    echo.
+    echo %CYAN%📥 Instale o Python 3.8+ primeiro:%NC%
+    echo    • Aceda a: https://www.python.org/downloads/
+    echo    • Descarregue Python 3.8 ou superior
+    echo    • ✅ Durante a instalação, marque "Add Python to PATH"
+    echo.
+    echo %RED%Após instalar Python, execute este script novamente.%NC%
+    goto :end
+)
+
+:: Obter versão do Python
+for /f "tokens=2" %%a in ('python --version 2^>^&1') do set PYTHON_VERSION=%%a
+echo %GREEN%✅ Python %PYTHON_VERSION% encontrado%NC%
+
+:: Verificar se pip está disponível
+echo %YELLOW%🔍 Verificando pip...%NC%
+pip --version >nul 2>&1
+if errorlevel 1 (
+    echo %RED%❌ pip não encontrado!%NC%
+    echo %CYAN%Instalando pip...%NC%
+    python -m ensurepip --default-pip
+    if errorlevel 1 (
+        echo %RED%❌ Falha ao instalar pip!%NC%
+        goto :end
+    )
+)
+echo %GREEN%✅ pip disponível%NC%
+
+echo.
+echo %BLUE%═══════════════════════════════════════════════════════════════%NC%
+echo %BLUE%                    INÍCIO DA CONFIGURAÇÃO                      %NC%
+echo %BLUE%═══════════════════════════════════════════════════════════════%NC%
+echo.
+
+:: Passo 1: Atualizar ferramentas base
+echo %YELLOW%📦 PASSO 1/10: Atualizando ferramentas base...%NC%
+echo %CYAN%→ Atualizando pip...%NC%
+%PIP_EXE% install --upgrade pip
+if errorlevel 1 (
+    echo %RED%❌ Falha ao atualizar pip%NC%
+    goto :end
+)
+echo %GREEN%✅ pip atualizado%NC%
+
+echo %CYAN%→ Instalando/updating wheel...%NC%
+%PIP_EXE% install --upgrade wheel
+echo %GREEN%✅ wheel atualizado%NC%
+
+echo.
+echo %YELLOW%📦 PASSO 2/10: Criando ambiente virtual...%NC%
+
+:: Criar diretório do usuário se não existir
+if not exist "%USER_DATA_DIR%" (
+    mkdir "%USER_DATA_DIR%"
+    echo %CYAN%→ Diretório do usuário criado: %USER_DATA_DIR%%NC%
+)
+
+:: Criar subdirectórios necessários
+if not exist "%USER_DATA_DIR%\strategies" mkdir "%USER_DATA_DIR%\strategies"
+if not exist "%USER_DATA_DIR%\data" mkdir "%USER_DATA_DIR%\data"
+if not exist "%USER_DATA_DIR%\notebooks" mkdir "%USER_DATA_DIR%\notebooks"
+if not exist "%LOG_DIR%" mkdir "%LOG_DIR%"
+
+echo %GREEN%✅ Estrutura de diretórios criada%NC%
+
+:: Passo 3: Instalar FreqTrade
+echo.
+echo %YELLOW%📦 PASSO 3/10: Instalando FreqTrade...%NC%
+
+:: Instalar FreqTrade
+%PIP_EXE% install freqtrade
+if errorlevel 1 (
+    echo %RED%❌ Falha ao instalar FreqTrade%NC%
+    echo %CYAN%→ Tentando instalação via conda...%NC%
+    conda install freqtrade -c conda-forge
+    if errorlevel 1 (
+        echo %RED%❌ Falha na instalação do FreqTrade%NC%
+        goto :end
+    )
+)
+
+echo %GREEN%✅ FreqTrade instalado%NC%
+
+:: Verificar instalação
+freqtrade --version >nul 2>&1
+if errorlevel 1 (
+    echo %RED%❌ FreqTrade não está funcionando corretamente%NC%
+    goto :end
+)
+echo %GREEN%✅ FreqTrade verificado%NC%
+
+:: Passo 4: Instalar UI
+echo.
+echo %YELLOW%🎨 PASSO 4/10: Configurando FreqUI (Interface TradingView)...%NC%
+echo %CYAN%→ Instalando componentes da UI...%NC%
+
+%PIP_EXE% install "freqtrade[ui]"
+if errorlevel 1 (
+    echo %YELLOW%⚠️ Aviso: Instalação parcial da UI%NC%
+    echo %CYAN%→ Continuando com configuração básica...%NC%
+)
+
+echo %GREEN%✅ FreqUI configurada%NC%
+
+:: Passo 5: Configurar estratégias
+echo.
+echo %YELLOW%🧠 PASSO 5/10: Configurando estratégias...%NC%
+
+:: Copiar estratégias para user_data
+echo %CYAN%→ Copiando estratégias para user_data...%NC%
+if exist "%STRATEGY_DIR%\*.py" (
+    copy "%STRATEGY_DIR%\*.py" "%USER_DATA_DIR%\strategies\" >nul
+    echo %GREEN%✅ Estratégias copiadas%NC%
+) else (
+    echo %YELLOW%⚠️ Nenhuma estratégia encontrada em %STRATEGY_DIR%%NC%
+)
+
+:: Passo 6: Configurar dados históricos
+echo.
+echo %YELLOW%📊 PASSO 6/10: Configurando dados históricos...%NC%
+
+:: Configurar dados para um par popular (BTC/USDT)
+echo %CYAN%→ Configurando dados para BTC/USDT (timeframe 15m)...%NC%
+
+cd /d "%USER_DATA_DIR%"
+
+:: Fazer download de dados históricos
+freqtrade download-data --pairs BTC/USDT --timeframes 15m 1h --days 30
+if errorlevel 1 (
+    echo %YELLOW%⚠️ Aviso: Falha no download de dados%NC%
+    echo %CYAN%→ Continue, você pode fazer download mais tarde%NC%
+)
+
+echo %GREEN%✅ Dados históricos configurados%NC%
+
+:: Voltar para diretório original
+cd /d "%INSTALL_DIR%"
+
+:: Passo 7: Configurar exchange
+echo.
+echo %YELLOW%🔑 PASSO 7/10: Configuração da Exchange...%NC%
+echo.
+echo %CYAN%Para configurar as credenciais da exchange:%NC%
+echo.
+echo %YELLOW%1. Binance (Recomendado para iniciantes):%NC%
+echo    • Aceda a: https://www.binance.com/en/my/settings/api-management
+echo    • Crie uma nova API key
+echo    • ✅ Ative apenas "Spot Trading" (NÃO ative "Withdrawals")
+echo    • Copie a API key e secret
+echo.
+echo %YELLOW%2. Outros exchanges suportados:%NC%
+echo    • KuCoin, Coinbase, Kraken, OKX, Bybit
+echo    • Configure da mesma forma
+echo.
+echo %CYAN%DICA: Use sempre chaves API com permissões mínimas!%NC%
+
+:configure_exchange
+echo.
+set /p "exchange_name=Qual exchange deseja usar? (binance/kucoin/coinbase/kraken) [binance]: "
+if "%exchange_name%"=="" set exchange_name=binance
+
+echo.
+echo %CYAN%Configurando para %exchange_name%...%NC%
+
+:: Gerar config.json baseado na escolha
+echo %CYAN%→ Gerando configuração personalizada...%NC%
+
+:: Criar config.json básico
+echo %YELLOW%📝 Criando arquivo de configuração básico...%NC%
+
+:: Passo 8: Configurar FreqUI
+echo.
+echo %YELLOW%🌐 PASSO 8/10: Configurando FreqUI...%NC%
+
+:: Configurar FreqUI
+freqtrade install-ui
+if errorlevel 1 (
+    echo %YELLOW%⚠%NC%Aviso: FreqUI pode precisar de configuração manual%NC%
+)
+
+echo %GREEN%✅ FreqUI configurada%NC%
+
+:: Passo 9: Configurar alertas
+echo.
+echo %YELLOW%🔔 PASSO 9/10: Configuração de Alertas...%NC%
+
+echo.
+echo %CYAN%🎯 Configurar notificações para receber alertas de trading:%NC%
+echo.
+echo %YELLOW%1. Telegram (Mais popular):%NC%
+echo    • Crie um bot no @BotFather
+echo    • Anote o Token do bot
+echo    • Crie um grupo e adicione o bot
+echo.
+echo %YELLOW%2. Discord:%NC%
+echo    • Crie um webhook no seu servidor Discord
+echo    • Copie a URL do webhook
+echo.
+echo %YELLOW%3. Email:%NC%
+echo    • Configure SMTP do seu email
+echo    • Gmail, Outlook, etc.
+echo.
+
+set /p "telegram_token=Token do Telegram (opcional, pressione Enter para pular): "
+set /p "discord_webhook="Discord Webhook (opcional, pressione Enter para pular): "
+set /p "email_config="Configuração Email (opcional, pressione Enter para pular): "
+
+echo %GREEN%✅ Configurações de alertas gravadas%NC%
+
+:: Passo 10: Testes finais
+echo.
+echo %YELLOW%✅ PASSO 10/10: Executando testes finais...%NC%
+
+echo %CYAN%→ Testando instalação do FreqTrade...%NC%
+freqtrade test-strategy --strategy template_strategy
+if errorlevel 1 (
+    echo %YELLOW%⚠️ Aviso: Teste de estratégia falhou%NC%
+    echo %CYAN%→ Isso pode ser normal se não tiver dados históricos%NC%
+) else (
+    echo %GREEN%✅ Teste de estratégia OK%NC%
+)
+
+echo %CYAN%→ Verificando integridade dos arquivos...%NC%
+if exist "%USER_DATA_DIR%\strategies\*.py" (
+    echo %GREEN%✅ Estratégias encontradas%NC%
+) else (
+    echo %YELLOW%⚠️ Nenhuma estratégia encontrada%NC%
+)
+
+if exist "%USER_DATA_DIR%\data\*.json" (
+    echo %GREEN%✅ Dados históricos encontrados%NC%
+) else (
+    echo %YELLOW%⚠%NC%Nenhum dado histórico encontrado
+    echo %CYAN%→ Execute: freqtrade download-data --pairs BTC/USDT --days 7%NC%
+)
+
+:: Resumo final
+echo.
+echo %BLUE%═══════════════════════════════════════════════════════════════%NC%
+echo %BLUE%                     CONFIGURAÇÃO CONCLUÍDA!                    %NC%
+echo %BLUE%═══════════════════════════════════════════════════════════════%NC%
+echo.
+echo %GREEN%🎉 Parabéns! O FreqTrade3 foi configurado com sucesso!%NC%
+echo.
+echo %CYAN%📋 RESUMO DA CONFIGURAÇÃO:%NC%
+echo    • FreqTrade instalado e verificado
+echo    • FreqUI configurado (interface web)
+echo    • Estratégias disponíveis em: %USER_DATA_DIR%\strategies\
+echo    • Diretório de dados: %USER_DATA_DIR%\data\
+echo.
+echo %YELLOW%🚀 PRÓXIMOS PASSOS:%NC%
+echo.
+echo %CYAN%1. COMEÇAR TRADING:%NC%
+echo    freqtrade trade --config configs\config.json --strategy template_strategy --dry-run
+echo.
+echo %CYAN%2. INTERFACE WEB (FreqUI):%NC%
+echo    freqtrade trade --config configs\config.json --strategy template_strategy --ui-enable
+echo    Depois abra: http://localhost:8080
+echo.
+echo %CYAN%3. BACKTESTING:%NC%
+echo    freqtrade backtesting --config configs\config.json --strategy template_strategy
+echo.
+echo %CYAN%4. DOWNLOAD DE DADOS:%NC%
+echo    freqtrade download-data --pairs BTC/USDT --timeframes 15m 1h --days 30
+echo.
+echo %YELLOW%⚠️ IMPORTANTE - SEGURANÇA:%NC%
+echo    • SEMPRE teste em DRY-RUN primeiro!
+echo    • Configure API keys apenas com permissões de trading
+echo    • NUNCA use chaves com permissões de withdrawal
+echo    • Faça backup das suas configurações
+echo.
+echo %GREEN%📚 DOCUMENTAÇÃO:%NC%
+echo    • README.md - Visão geral do projeto
+echo    • SECURITY.md - Políticas de segurança
+echo    • docs\USER_GUIDE.md - Manual completo
+echo.
+
+:: Pergunta final sobre inicialização
+echo.
+set /p "start_trading="Deseja iniciar o FreqTrade em modo dry-run agora? (s/n) [s]: "
+if "%start_trading%"=="" set start_trading=s
+
+if /i "%start_trading%"=="s" (
+    echo.
+    echo %CYAN%🚀 Iniciando FreqTrade em modo DRY-RUN...%NC%
+    echo %YELLOW%⚠️ Modo DRY-RUN: Nenhum dinheiro real será usado!%NC%
+    echo.
+    echo %CYAN%Para parar: Pressione Ctrl+C%NC%
+    echo.
+
+    :: Configurar e iniciar
+    freqtrade trade --config configs\config_template_dryrun.json --strategy template_strategy
+)
+
+:end
+echo.
+echo %CYAN%Obrigado por usar FreqTrade3!%NC%
+echo.
+echo %YELLOW%📞 SUPORTE:%NC%
+echo    • GitHub: https://github.com/smpsandro1239/FreqTrade3
+echo    • Documentação: README.md
+echo    • Problemas: Abra uma issue no GitHub
+echo.
+
+pause

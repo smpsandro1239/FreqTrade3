@@ -1,0 +1,183 @@
+{
+  "_meta": {
+    "template_version": "3.0",
+    "template_type": "live_trading",
+    "security_level": "high",
+    "description": "Template para trading real (apenas usuários experientes)",
+    "⚠️ WARNING": "USE APENAS APÓS TESTES EXTENSIVOS EM DRY-RUN"
+  },
+
+  "exchange": {
+    "name": "binance",
+    "key": "${BINANCE_API_KEY}",
+    "secret": "${BINANCE_SECRET}",
+    "ccxt_config": {
+      "enableRateLimit": true
+    },
+    "ccxt_async_config": {
+      "enableRateLimit": true,
+      "rateLimit": 200
+    }
+  },
+
+  "dry_run": false,
+  "dry_run_wallet": 10000,
+
+  "max_open_trades": 5,
+  "stake_amount": 50,
+  "tradable_balance_ratio": 0.8,
+  "stake_currency": "USDT",
+
+  "stoploss": -0.01,
+  "trailing_stop": true,
+  "trailing_stop_positive": 0.005,
+  "trailing_stop_positive_offset": 0.01,
+
+  "minimal_roi": {
+    "0": 0.02,
+    "20": 0.01,
+    "40": 0.005,
+    "120": 0
+  },
+
+  "unfilledtimeout": {
+    "buy": 5,
+    "sell": 15
+  },
+
+  "process_only_new_candles": true,
+  "startup_candles": 50,
+
+  "pair_whitelist": [
+    "BTC/USDT",
+    "ETH/USDT",
+    "BNB/USDT",
+    "ADA/USDT",
+    "DOT/USDT",
+    "LINK/USDT",
+    "LTC/USDT",
+    "XRP/USDT",
+    "SOL/USDT",
+    "MATIC/USDT"
+  ],
+
+  "pair_blacklist": [
+    "BTC/USDT.*UP",
+    "BTC/USDT.*DOWN",
+    ".*/BUSD",
+    ".*/USDC"
+  ],
+
+  "data_source_3rd_party": {
+    "name": "none"
+  },
+
+  "update_timeout": 1,
+
+  "api_server": {
+    "enabled": true,
+    "listen_ip_address": "127.0.0.1",
+    "listen_port": 8080
+  },
+
+  "webhook": {
+    "enabled": true,
+    "url": "${WEBHOOK_URL}",
+    "format": "json"
+  },
+
+  "telegram": {
+    "enabled": true,
+    "token": "${TELEGRAM_BOT_TOKEN}",
+    "chat_id": "${TELEGRAM_CHAT_ID}",
+    "keyboard": [
+      [{"text": "/daily"}, {"text": "/profit"}, {"text": "/balance"}],
+      [{"text": "/count"}, {"text": "/status"}, {"text": "/start"}],
+      [{"text": "/stop"}, {"text": "/leave"}]
+    ]
+  },
+
+  "notifications": {
+    "trade_enter": true,
+    "trade_exit": true,
+    "trade_cancel": true,
+    "trade_error": true,
+    "notification_settings": {
+      "discord": {
+        "enabled": false,
+        "webhook_url": "${DISCORD_WEBHOOK}"
+      },
+      "slack": {
+        "enabled": false,
+        "webhook_url": "${SLACK_WEBHOOK}"
+      }
+    }
+  },
+
+  "log_level": "INFO",
+  "logfile": "logs/freqtrade_live.log",
+  "log_format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+
+  "ask_order_book": {
+    "enabled": false
+  },
+
+  "bid_order_book": {
+    "enabled": false
+  },
+
+  "protect_future": {
+    "enabled": true,
+    "lookahead": 3
+  },
+
+  "unfilledtimeout_rate_limit": {
+    "enabled": true,
+    "limit": 50
+  },
+
+  "skip_pair_validation": false,
+  "can_short": false,
+  "position_stacking": false,
+  "amount_reserve_percent": 0.5,
+
+  "strategy": "${STRATEGY_NAME}",
+  "strategy_path": "user_data/strategies",
+  "additional_strategy_path": "strategies",
+
+  "edge": {
+    "enabled": true,
+    "process_only_new_candles": true,
+    "price_last": 20,
+    "persistence": 10,
+    "enter_reason": "re_entry",
+    "exit_reason": "roi"
+  },
+
+  "g fasten-rate-limit": {
+    "enabled": true,
+    "rate_limit": 50,
+    "stagger": 0.1
+  },
+
+  "fee": {
+    "maker": 0.001,
+    "taker": 0.001
+  },
+
+  "polling_balance": {
+    "enabled": true,
+    "amount": 500
+  },
+
+  "api_server_options": {
+    "read_timeout": 30,
+    "write_timeout": 30,
+    "connect_timeout": 30
+  },
+
+  "trading_mode": "spot",
+  "experimental": {
+    "s Candles_timeframe_parsing": false
+  }
+}

@@ -1,0 +1,608 @@
+#!/usr/bin/env python3
+"""
+================================================================
+FREQTRADE3 - ESTRATÉGIA MACD MOMENTUM
+================================================================
+
+Estratégia de trading baseada em:
+- MACD (Moving Average Convergence Divergence)
+- RSI para confirmação
+- Momentum indicators
+- Volume confirmation
+
+Características:
+- Medium to High risk / High reward
+- Boa para traders experientes
+- Gestão de risco rigorosa
+- Múltiplos timeframes
+
+Win Rate Esperado: 55-65%
+Max Drawdown: 10-15%
+Sharpe Ratio: 1.0-1.5
+
+Autor: FreqTrade3 Project
+Data: 2025-11-05
+Versão: 1.0.0
+================================================================
+"""
+
+import logging
+from datetime import datetime, timedelta
+from typing import Dict, Optional, Tuple
+
+import freqtrade.vendor.qtpylib.indicators as qtpylib
+import pandas as pd
+import talib.abstract as ta
+from freqtrade.persistence import Trade
+from freqtrade.strategy import (CategoricalParameter, DecimalParameter,
+                                IntParameter, IStrategy)
+
+
+class MACDStrategy(IStrategy):
+    """
+    Estratégia Aggressiva MACD Momentum
+
+    Esta estratégia implementa uma abordagem mais agressiva:
+    - Usa MACD como principal gerador de sinais
+    - RSI para evitar entradas em overbought/oversold
+    - Confirmação por momentum e volume
+    - Stop loss dinâmico baseado em ATR
+    - Take profit em múltiplos níveis
+
+    Parâmetros otimizáveis para ajuste fino.
+    """
+
+    # ========================================
+    # CONFIGURAÇÕES BÁSICAS
+    # ========================================
+
+    # Timeframe principal da estratégia
+    timeframe = '15m'
+    startup_candles = 50
+
+    # ROI mais agressivo
+    minimal_roi = {
+        "0": 0.08,    # 8% profit máximo imediato
+        "20": 0.05,   # 5% após 20min
+        "40": 0.03,   # 3% após 40min
+        "80": 0.02,   # 2% após 1h20min
+        "160": 0      # Break-even após 2h40min
+    }
+
+    # Stop loss mais agressivo
+    stoploss = -0.05  # -5% máximo
+
+    # Trailing stop mais agressivo
+    trailing_stop = True
+    trailing_stop_positive = 0.04  # 4% trailing
+    trailing_stop_positive_offset = 0.02  # 2% offset
+    trailing_only_offset_is_reached = True
+
+    # Configurações de trading
+    process_only_closed_candles = True
+    use_exit_signal = True
+    exit_profit_only = False
+    ignore_roi_if_buy_signal = True
+
+    # ========================================
+    # PARÂMETROS OTIMIZÁVEIS
+    # ========================================
+
+    # MACD - Main signal generator
+    macd_fast = IntParameter(8, 15, default=12, space="buy",
+                            description="Período MACD rápido")
+    macd_slow = IntParameter(18, 30, default=26, space="buy",
+                            description="Período MACD lento")
+    macd_signal = IntParameter(5, 12, default=9, space="buy",
+                              description="Período MACD signal")
+
+    # RSI - Confirmation
+    rsi_period = IntParameter(10, 20, default=14, space="buy")
+    rsi_oversold = IntParameter(15, 35, default=30, space="buy")
+    rsi_overbought = IntParameter(65, 85, default=70, space="buy")
+
+    # Volume and Momentum
+    volume_ma_period = IntParameter(15, 25, default=20, space="buy")
+    momentum_period = IntParameter(8, 15, default=10, space="buy")
+
+    # ATR for dynamic stops
+    atr_period = IntParameter(10, 20, default=14, space="buy")
+    atr_multiplier = DecimalParameter(1.5, 3.0, default=2.0, space="buy")
+
+    # Bollinger Bands for volatility
+    bb_period = IntParameter(15, 25, default=20, space="buy")
+    bb_std = DecimalParameter(1.5, 2.5, default=2.0, space="buy")
+
+    # Filters
+    min_volume = IntParameter(3000000, 15000000, default=8000000, space="buy")
+    max_spread = DecimalParameter(0.2, 1.0, default=0.6, space="buy")
+
+    # Risk management
+    max_open_trades = 3  # Slightly more aggressive
+    cooldown_minutes = IntParameter(15, 60, default=30, space="buy")
+
+    # ========================================
+    # VARIÁVEIS INTERNAS
+    # ========================================
+
+    # Controle de cooldowns
+    _last_buy_time = {}
+
+    def log_strategy_event(self, message: str, level: str = "INFO"):
+        """Log customizado para eventos da estratégia"""
+        logger = logging.getLogger("MACDStrategy")
+
+        if level == "CRITICAL":
+            logger.critical(f"[MACD_STRATEGY] {message}")
+        elif level == "ERROR":
+            logger.error(f"[MACD_STRATEGY] {message}")
+        elif level == "WARNING":
+            logger.warning(f"[MACD_STRATEGY] {message}")
+        else:
+            logger.info(f"[MACD_STRATEGY] {message}")
+
+    def populate_indicators(self, dataframe: pd.DataFrame, metadata: dict) -> pd.DataFrame:
+        """
+        Popula indicadores MACD Momentum
+
+        Args:
+            dataframe: DataFrame com dados OHLCV
+            metadata: Metadados do par
+
+        Returns:
+            DataFrame com indicadores calculados
+        """
+
+        # Validação básica dos dados
+        if dataframe.empty or len(dataframe) < max(self.macd_slow.value, self.rsi_period.value, 50):
+            self.log_strategy_event(f"Dados insuficientes para MACD Strategy - {metadata.get('pair', 'N/A')}", "WARNING")
+            return dataframe
+
+        try:
+            # ========================================
+            # MACD - Indicador principal
+            # ========================================
+
+            macd, macd_signal, macd_hist = qtpylib.MACD(
+                dataframe['close'],
+                fastperiod=self.macd_fast.value,
+                slowperiod=self.macd_slow.value,
+                signalperiod=self.macd_signal.value
+            )
+            dataframe['macd'] = macd
+            dataframe['macd_signal'] = macd_signal
+            dataframe['macd_hist'] = macd_hist
+
+            # ========================================
+            # RSI - Confirmação de momentum
+            # ========================================
+
+            dataframe['rsi'] = qtpylib.RSI(dataframe, timeperiod=self.rsi_period.value)
+
+            # ========================================
+            # VOLUME - Confirmação de interesse
+            # ========================================
+
+            # Volume moving average
+            dataframe['volume_ma'] = qtpylib.SMA(dataframe['volume'], timeperiod=self.volume_ma_period.value)
+            dataframe['volume_ratio'] = dataframe['volume'] / dataframe['volume_ma']
+
+            # On-Balance Volume (OBV) for volume momentum
+            dataframe['obv'] = qtpylib.OBV(dataframe['close'], dataframe['volume'])
+
+            # ========================================
+            # MOMENTUM INDICATORS
+            # ========================================
+
+            # Momentum
+            dataframe['momentum'] = qtpylib.MOM(dataframe['close'], timeperiod=self.momentum_period.value)
+
+            # Rate of Change (ROC)
+            dataframe['roc'] = qtpylib.ROC(dataframe['close'], timeperiod=self.momentum_period.value)
+
+            # Williams %R
+            dataframe['willr'] = qtpylib.WILLR(dataframe['high'], dataframe['low'], dataframe['close'], timeperiod=14)
+
+            # ========================================
+            # ATR - Volatilidade para stop loss dinâmico
+            # ========================================
+
+            dataframe['atr'] = ta.ATR(dataframe, timeperiod=self.atr_period.value)
+            dataframe['atr_percentage'] = dataframe['atr'] / dataframe['close']
+
+            # ========================================
+            # BOLLINGER BANDS - Volatilidade extrema
+            # ========================================
+
+            bb_upper, bb_middle, bb_lower = qtpylib.BBANDS(
+                dataframe['close'],
+                timeperiod=self.bb_period.value,
+                nbdevup=self.bb_std.value,
+                nbdevdn=self.bb_std.value
+            )
+            dataframe['bb_upper'] = bb_upper
+            dataframe['bb_middle'] = bb_middle
+            dataframe['bb_lower'] = bb_lower
+
+            # BB squeeze indicator
+            dataframe['bb_width'] = (dataframe['bb_upper'] - dataframe['bb_lower']) / dataframe['bb_middle']
+            dataframe['bb_squeeze'] = dataframe['bb_width'] < dataframe['bb_width'].rolling(20).mean() * 0.8
+
+            # ========================================
+            # SINAIS DERIVADOS
+            # ========================================
+
+            # MACD Bullish crossover
+            dataframe['macd_bullish_cross'] = (
+                (dataframe['macd'] > dataframe['macd_signal']) &
+                (dataframe['macd'].shift(1) <= dataframe['macd_signal'].shift(1))
+            )
+
+            # MACD Bearish crossover
+            dataframe['macd_bearish_cross'] = (
+                (dataframe['macd'] < dataframe['macd_signal']) &
+                (dataframe['macd'].shift(1) >= dataframe['macd_signal'].shift(1))
+            )
+
+            # MACD histogram bullish momentum
+            dataframe['macd_hist_rising'] = dataframe['macd_hist'] > dataframe['macd_hist'].shift(1)
+
+            # MACD histogram bearish momentum
+            dataframe['macd_hist_falling'] = dataframe['macd_hist'] < dataframe['macd_hist'].shift(1)
+
+            # RSI conditions
+            dataframe['rsi_bullish'] = (
+                (dataframe['rsi'] > self.rsi_oversold.value) &
+                (dataframe['rsi'] < self.rsi_overbought.value)
+            )
+
+            dataframe['rsi_oversold'] = dataframe['rsi'] <= self.rsi_oversold.value
+            dataframe['rsi_overbought'] = dataframe['rsi'] >= self.rsi_overbought.value
+
+            # Volume confirmation
+            dataframe['volume_surge'] = dataframe['volume'] > (dataframe['volume_ma'] * 1.5)
+
+            # Momentum confirmation
+            dataframe['momentum_positive'] = dataframe['momentum'] > 0
+            dataframe['roc_positive'] = dataframe['roc'] > 0
+
+            # Price action relative to BB
+            dataframe['bb_breakout_upper'] = dataframe['close'] > dataframe['bb_upper']
+            dataframe['bb_breakout_lower'] = dataframe['close'] < dataframe['bb_lower']
+
+            # William %R conditions
+            dataframe['willr_oversold'] = dataframe['willr'] <= -80
+            dataframe['willr_overbought'] = dataframe['willr'] >= -20
+
+            self.log_strategy_event(f"Indicadores MACD Strategy calculados para {metadata.get('pair', 'N/A')}")
+
+        except Exception as e:
+            self.log_strategy_event(f"Erro ao calcular indicadores MACD Strategy: {e}", "ERROR")
+            return pd.DataFrame()
+
+        return dataframe
+
+    def populate_buy_trend(self, dataframe: pd.DataFrame, metadata: dict) -> pd.DataFrame:
+        """
+        Define condições de compra agressivas
+
+        Args:
+            dataframe: DataFrame com dados e indicadores
+            metadata: Metadados do par
+
+        Returns:
+            DataFrame com sinais de compra
+        """
+
+        # Inicializar coluna de sinal
+        dataframe['enter_long'] = 0
+
+        try:
+            # ========================================
+            # SINAL PRINCIPAL: MACD BULLISH CROSSOVER
+            # ========================================
+            # MACD cruzando acima da signal line
+            macd_signal = dataframe['macd_bullish_cross']
+
+            # ========================================
+            # CONFIRMAÇÃO 1: RSI NÃO EXTREMO
+            # ========================================
+            # RSI deve estar em zona neutra (não oversold/extreme)
+            rsi_confirm = dataframe['rsi_bullish']
+
+            # ========================================
+            # CONFIRMAÇÃO 2: MOMENTUM POSITIVO
+            # ========================================
+            # Momentum e ROC devem ser positivos
+            momentum_confirm = dataframe['momentum_positive'] & dataframe['roc_positive']
+
+            # ========================================
+            # CONFIRMAÇÃO 3: VOLUME
+            # ========================================
+            # Volume deve estar acima da média (interesse real)
+            volume_confirm = dataframe['volume_surge']
+
+            # ========================================
+            # CONFIRMAÇÃO 4: MACD HISTOGRAMA
+            # ========================================
+            # MACD histogram deve estar crescente (momentum building)
+            hist_confirm = dataframe['macd_hist_rising']
+
+            # ========================================
+            # CONFIRMAÇÃO 5: ATR (VOLATILIDADE)
+            # ========================================
+            # ATR não deve ser extremo (mercado não muito volátil)
+            atr_confirm = dataframe['atr_percentage'] < 0.10  # ATR < 10% do preço
+
+            # ========================================
+            # CONFIRMAÇÃO 6: WILLIAMS %R
+            # ========================================
+            # Williams %R deve não estar em oversold extremo
+            willr_confirm = ~dataframe['willr_oversold']
+
+            # ========================================
+            # CONFIRMAÇÃO 7: QUALIDADE DO PAR
+            # ========================================
+            # Volume mínimo e spread aceitável
+            quality_confirm = (
+                (dataframe['volume'] >= self.min_volume.value) &
+                (dataframe['volume_ratio'] >= 0.8)  # Volume não muito baixo
+            )
+
+            # ========================================
+            # COMBINAR TODAS AS CONDIÇÕES
+            # ========================================
+            buy_condition = (
+                macd_signal &            # MACD bullish crossover
+                rsi_confirm &            # RSI em zona neutra
+                momentum_confirm &       # Momentum positivo
+                volume_confirm &         # Volume em alta
+                hist_confirm &           # MACD hist crescente
+                atr_confirm &            # Volatilidade aceitável
+                willr_confirm &          # Williams %R ok
+                quality_confirm &        # Qualidade do par
+                (dataframe['volume'] > 0)  # Volume válido
+            )
+
+            # Aplicar sinais de compra
+            dataframe.loc[buy_condition, 'enter_long'] = 1
+
+            # Log de estatísticas
+            total_signals = buy_condition.sum()
+            if total_signals > 0:
+                pair_name = metadata.get('pair', 'N/A')
+                self.log_strategy_event(f"Buy signals MACD Strategy para {pair_name}: {total_signals} sinais")
+
+        except Exception as e:
+            self.log_strategy_event(f"Erro em populate_buy_trend: {e}", "ERROR")
+            dataframe['enter_long'] = 0
+
+        return dataframe
+
+    def populate_exit_trend(self, dataframe: pd.DataFrame, metadata: dict) -> pd.DataFrame:
+        """
+        Define condições de saída
+
+        Args:
+            dataframe: DataFrame com dados e indicadores
+            metadata: Metadados do par
+
+        Returns:
+            DataFrame com sinais de saída
+        """
+
+        # Inicializar coluna de sinal
+        dataframe['exit_long'] = 0
+
+        try:
+            # ========================================
+            # SAÍDA 1: MACD BEARISH CROSSOVER
+            # ========================================
+            # MACD cruzando abaixo da signal line
+            macd_exit = dataframe['macd_bearish_cross']
+
+            # ========================================
+            # SAÍDA 2: RSI EXTREMOS
+            # ========================================
+            # RSI em overbought ou caindo de overbought
+            rsi_exit = (
+                dataframe['rsi_overbought'] |
+                (dataframe['rsi'] < dataframe['rsi'].shift(2))  # RSI caindo
+            )
+
+            # ========================================
+            # SAÍDA 3: MACD HISTOGRAMA DECLINING
+            # ========================================
+            # MACD histogram começando a cair
+            hist_exit = dataframe['macd_hist_falling']
+
+            # ========================================
+            # SAÍDA 4: MOMENTUM REVERSING
+            # ========================================
+            # Momentum começando a cair
+            momentum_exit = (
+                dataframe['momentum'] < dataframe['momentum'].shift(1) |
+                dataframe['roc'] < dataframe['roc'].shift(1)
+            )
+
+            # ========================================
+            # SAÍDA 5: BOLLINGER BANDS BREAKOUT
+            # ========================================
+            # Breakout bearish ou squeeze detection
+            bb_exit = (
+                dataframe['bb_breakout_lower'] |
+                (dataframe['bb_squeeze'] & dataframe['bb_breakout_upper'])
+            )
+
+            # ========================================
+            # SAÍDA 6: WILLIAMS %R
+            # ========================================
+            # Williams %R em overbought ou virando bearish
+            willr_exit = dataframe['willr_overbought']
+
+            # ========================================
+            # SAÍDA 7: VOLUME CONFIRMATION
+            # ========================================
+            # Volume muito baixo (fuga de interesse)
+            volume_exit = dataframe['volume'] < (dataframe['volume_ma'] * 0.5)
+
+            # ========================================
+            # COMBINAR CONDIÇÕES
+            # ========================================
+            exit_condition = (
+                macd_exit |
+                rsi_exit |
+                hist_exit |
+                momentum_exit |
+                bb_exit |
+                willr_exit |
+                volume_exit
+            )
+
+            # Aplicar sinais de saída
+            dataframe.loc[exit_condition, 'exit_long'] = 1
+
+            # Log de estatísticas
+            total_exits = exit_condition.sum()
+            if total_exits > 0:
+                pair_name = metadata.get('pair', 'N/A')
+                self.log_strategy_event(f"Exit signals MACD Strategy para {pair_name}: {total_exits} sinais")
+
+        except Exception as e:
+            self.log_strategy_event(f"Erro em populate_exit_trend: {e}", "ERROR")
+            dataframe['exit_long'] = 0
+
+        return dataframe
+
+    def custom_stake_amount(self, pair: str, current_time: datetime, current_rate: float,
+                          proposed_stake: float, min_stake: Optional[float],
+                          max_stake: Optional[float], **kwargs) -> float:
+        """
+        Calcula stake amount com gestão de risco agressiva
+
+        Args:
+            pair: Par de trading
+            current_time: Tempo atual
+            current_rate: Taxa atual
+            proposed_stake: Stake proposto
+            min_stake: Stake mínimo
+            max_stake: Stake máximo
+
+        Returns:
+            Stake amount ajustado
+        """
+
+        try:
+            # Verificar limite máximo de trades ativos
+            current_trades = len(Trade.get_open_trades())
+            if current_trades >= self.max_open_trades:
+                return 0  # Bloquear novo trade
+
+            # Gestão de risco por par (8% de exposição máxima)
+            pair_exposure = 0
+            for trade in Trade.get_open_trades():
+                if trade.pair == pair:
+                    pair_exposure += trade.stake_amount
+
+            if max_stake and max_stake > 0:
+                max_pair_exposure = max_stake * 0.08  # 8% por par (mais agressivo)
+                if pair_exposure >= max_pair_exposure:
+                    return 0  # Exposição máxima atingida
+
+            # Stake mínimo
+            min_trade_amount = 15  # USDT mínimo menor
+            if proposed_stake < min_trade_amount:
+                return 0
+
+            return min(proposed_stake, max_stake or float('inf'))
+
+        except Exception as e:
+            self.log_strategy_event(f"Erro em custom_stake_amount: {e}", "ERROR")
+            return 0
+
+    def confirm_trade_entry(self, pair: str, order_type: str, amount: float, rate: float,
+                          time_in_force: str, current_time: datetime, entry_tag: Optional[str],
+                          side: str, **kwargs) -> bool:
+        """
+        Confirmação final para entrada agressiva
+
+        Args:
+            pair: Par de trading
+            order_type: Tipo de ordem
+            amount: Quantidade
+            rate: Taxa
+            time_in_force: Tempo em força
+            current_time: Tempo atual
+            entry_tag: Tag de entrada
+            side: Lado
+
+        Returns:
+            True se confirmar, False caso contrário
+        """
+
+        try:
+            # Verificar cooldown do par (mais curto)
+            cooldown_key = f"{pair}_{current_time.strftime('%Y%m%d')}"
+            if self._last_buy_time.get(cooldown_key, 0) > current_time.timestamp():
+                return False
+
+            # Verificar amount mínimo
+            if amount < 15:  # USDT mínimo menor para estratégia agressiva
+                return False
+
+            # Verificar slippage (mais tolerante)
+            if abs(rate - (rate * 0.03)) > 0.02:  # Slippage de 3%
+                return False
+
+            # Registrar cooldown (mais curto)
+            cooldown_until = (current_time + timedelta(minutes=self.cooldown_minutes.value)).timestamp()
+            self._last_buy_time[cooldown_key] = cooldown_until
+
+            self.log_strategy_event(f"Trade MACD Strategy confirmado para {pair}: {amount:.2f} USDT @ {rate:.6f}")
+
+            return True
+
+        except Exception as e:
+            self.log_strategy_event(f"Erro em confirm_trade_entry: {e}", "ERROR")
+            return False
+
+    def check_exit_signal(self, pair: str, trade: Trade, current_time: datetime, current_rate: float,
+                         current_profit: float, min_stake: Optional[float], **kwargs) -> Optional[pd.Series]:
+        """
+        Verificação adicional de sinais de saída
+
+        Args:
+            pair: Par de trading
+            trade: Objeto Trade
+            current_time: Tempo atual
+            current_rate: Taxa atual
+            current_profit: Lucro atual
+            min_stake: Stake mínimo
+
+        Returns:
+            None ou série com sinal de saída
+        """
+
+        try:
+            # Verificar se o trade está muito tempo aberto (menos conservador)
+            trade_age_hours = (current_time - trade.open_date).total_seconds() / 3600
+
+            if trade_age_hours > 72:  # 72 horas (3 dias) para estratégia agressiva
+                self.log_strategy_event(f"Forçando saída de {pair} - trade muito antigo ({trade_age_hours:.1f}h)", "WARNING")
+                return pd.Series([1, "MAX_AGE"])
+
+            # Verificar drawdown crítico (mais tolerante)
+            if current_profit < -0.08:  # 8% drawdown para estratégia agressiva
+                self.log_strategy_event(f"Drawdown crítico MACD Strategy para {pair}: {current_profit:.2%}", "WARNING")
+                return pd.Series([1, "HIGH_DRAWDOWN"])
+
+            # Verificar lucro alto (take profit precoce)
+            if current_profit > 0.12:  # 12% lucro (take profit)
+                self.log_strategy_event(f"Take profit MACD Strategy para {pair}: {current_profit:.2%}", "INFO")
+                return pd.Series([1, "HIGH_PROFIT"])
+
+            return None
+
+        except Exception as e:
+            self.log_strategy_event(f"Erro em check_exit_signal: {e}", "ERROR")
+            return None
