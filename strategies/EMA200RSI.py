@@ -30,12 +30,21 @@ import logging
 from datetime import datetime, timedelta
 from typing import Dict, Optional, Tuple
 
-import freqtrade.vendor.qtpylib.indicators as qtpylib
 import pandas as pd
 import talib.abstract as ta
 from freqtrade.persistence import Trade
 from freqtrade.strategy import (CategoricalParameter, DecimalParameter,
                                 IntParameter, IStrategy)
+
+
+# Cross detection using pandas directly
+def crossed_above(series1, series2):
+    """Check if series1 crossed above series2"""
+    return (series1 > series2) & (series1.shift(1) <= series2.shift(1))
+
+def crossed_below(series1, series2):
+    """Check if series1 crossed below series2"""
+    return (series1 < series2) & (series1.shift(1) >= series2.shift(1))
 
 
 class EMA200RSI(IStrategy):
@@ -209,7 +218,7 @@ class EMA200RSI(IStrategy):
             # ========================================
 
             # Volume - Filtro de qualidade
-            dataframe['volume_sma'] = ta.SMA(dataframe['volume'], timeperiod=20)
+            dataframe['volume_sma'] = ta.SMA(dataframe, timeperiod=20)
             dataframe['volume_ratio'] = dataframe['volume'] / dataframe['volume_sma']
 
             # ATR - Volatilidade
@@ -461,7 +470,7 @@ class EMA200RSI(IStrategy):
 
     def custom_stake_amount(self, pair: str, current_time: datetime, current_rate: float,
                           proposed_stake: float, min_stake: Optional[float], max_stake: Optional[float],
-                          **kwargs) -> float:
+                          leverage: float, entry_tag: Optional[str], side: str, **kwargs) -> float:
         """
         Calcula stake amount com controles de risco conservadores
 
@@ -472,6 +481,9 @@ class EMA200RSI(IStrategy):
             proposed_stake: Stake proposto
             min_stake: Stake mínimo
             max_stake: Stake máximo
+            leverage: Alavancagem
+            entry_tag: Tag de entrada
+            side: Lado (buy/sell)
 
         Returns:
             Stake amount ajustado
@@ -534,13 +546,11 @@ class EMA200RSI(IStrategy):
                 self.log_strategy_event(f"Cooldown ativo para {pair} - rejeitando entrada", "WARNING")
                 return False
 
-            # Verificar se há trade muito recente do mesmo par
-            recent_trades = Trade.get_trades_for_pair(pair)
-            for trade in recent_trades:
-                time_since_close = (current_time - trade.close_date).total_seconds() / 60  # minutos
-                if time_since_close < self.cooldown_minutes.value:
-                    self.log_strategy_event(f"Trade muito recente de {pair} - rejeitando entrada", "WARNING")
-                    return False
+            # Verificação simplificada - apenas limitar trades simultâneos
+            open_trades = len(Trade.get_open_trades())
+            if open_trades >= self.max_open_trades:
+                self.log_strategy_event(f"Limite de trades ativos atingido ({open_trades}) - rejeitando entrada", "WARNING")
+                return False
 
             # Verificar amount mínimo
             if amount < 20:  # USDT mínimo conservador
@@ -565,15 +575,13 @@ class EMA200RSI(IStrategy):
             self.log_strategy_event(f"Erro em confirm_trade_entry: {e}", "ERROR")
             return False
 
-    def bot_loop_start(self, **kwargs) -> None:
+    def bot_loop_start(self, current_time: datetime, **kwargs) -> None:
         """
         Executado no início de cada loop do bot
         Reset contadores diários e atualiza estatísticas
         """
 
         try:
-            current_time = datetime.now()
-
             # Resetar informações antigas (mais de 7 dias)
             cutoff_time = (current_time - timedelta(days=7)).timestamp()
             old_keys = [key for key, timestamp in self._last_buy_time.items() if timestamp < cutoff_time]

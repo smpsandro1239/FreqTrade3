@@ -30,15 +30,13 @@ import logging
 import operator
 from datetime import datetime, timedelta
 from functools import reduce
-from typing import Dict, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
-import freqtrade.vendor.qtpylib.indicators as qtpylib
 import pandas as pd
 import talib.abstract as ta
-from freqtrade.constants import BACKTEST_BENCHMARK
 from freqtrade.persistence import Trade
 from freqtrade.strategy import (CategoricalParameter, DecimalParameter,
-                                IntParameter, merge_informative_pair)
+                                IntParameter)
 from freqtrade.strategy.interface import IStrategy
 
 
@@ -165,17 +163,17 @@ class SafeTemplateStrategy(IStrategy):
         """
 
         # Validação básica dos dados
-        if dataframe.empty or len(dataframe) < max(self.short_ma_period, self.long_ma_period):
+        if dataframe.empty or len(dataframe) < max(self.short_ma_period.value, self.long_ma_period.value):
             self.log_strategy_event(f"Dados insuficientes para {metadata.get('pair', 'N/A')}", "WARNING")
             return dataframe
 
         try:
             # Moving Averages
-            dataframe['ma_short'] = ta.SMA(dataframe, timeperiod=self.short_ma_period.value)
-            dataframe['ma_long'] = ta.SMA(dataframe, timeperiod=self.long_ma_period.value)
+            dataframe['ma_short'] = ta.SMA(dataframe['close'], timeperiod=self.short_ma_period.value)
+            dataframe['ma_long'] = ta.SMA(dataframe['close'], timeperiod=self.long_ma_period.value)
 
             # RSI
-            dataframe['rsi'] = ta.RSI(dataframe, timeperiod=self.rsi_period.value)
+            dataframe['rsi'] = ta.RSI(dataframe['close'], timeperiod=self.rsi_period.value)
 
             # MACD
             macd, macd_signal, macd_hist = ta.MACD(
@@ -203,7 +201,7 @@ class SafeTemplateStrategy(IStrategy):
             dataframe['atr'] = ta.ATR(dataframe, timeperiod=14)
 
             # Volume indicators
-            dataframe['volume_sma'] = ta.SMA(dataframe['volume'], timeperiod=20)
+            dataframe['volume_sma'] = ta.SMA(dataframe['close'], timeperiod=20)
             dataframe['volume_ratio'] = dataframe['volume'] / dataframe['volume_sma']
 
             # Indicadores de momentum
@@ -375,7 +373,8 @@ class SafeTemplateStrategy(IStrategy):
         return dataframe
 
     def custom_stake_amount(self, pair: str, current_time: datetime, current_rate: float,
-                          proposed_stake: float, min_stake: float, max_stake: float, **kwargs) -> float:
+                          proposed_stake: float, min_stake: Optional[float], max_stake: Optional[float],
+                          leverage: float, entry_tag: Optional[str], side: str, **kwargs) -> float:
         """
         Calcula stake amount com controles de risco
 
@@ -386,6 +385,9 @@ class SafeTemplateStrategy(IStrategy):
             proposed_stake: Stake proposto
             min_stake: Stake mínimo
             max_stake: Stake máximo
+            leverage: Alavancagem
+            entry_tag: Tag de entrada
+            side: Lado (buy/sell)
 
         Returns:
             Stake amount ajustado
@@ -502,17 +504,17 @@ class SafeTemplateStrategy(IStrategy):
             self.log_strategy_event(f"Erro em leverage_by_share: {e}", "ERROR")
             return 1.0
 
-    def bot_loop_start(self, **kwargs) -> None:
+    def bot_loop_start(self, current_time: datetime, **kwargs) -> None:
         """
         Executado no início de cada loop do bot
 
         Args:
+            current_time: Tempo atual
             **kwargs: Argumentos adicionais
         """
 
         try:
             # Resetar contadores diários
-            current_time = datetime.now()
             day_key = current_time.strftime('%Y%m%d')
 
             # Limpar informações antigas (mais de 7 dias)
@@ -536,7 +538,7 @@ class SafeTemplateStrategy(IStrategy):
 
     def confirm_trade_entry(self, pair: str, order_type: str, amount: float, rate: float,
                           time_in_force: str, current_time: datetime, entry_tag: Optional[str],
-                          side: str, **kwargs) -> Tuple[bool, Optional[str]]:
+                          side: str, **kwargs) -> bool:
         """
         Confirmação final antes da entrada
 
@@ -551,22 +553,25 @@ class SafeTemplateStrategy(IStrategy):
             side: Lado
 
         Returns:
-            Tuple (confirmar, razão)
+            True se confirmar, False caso contrário
         """
 
         try:
             # Verificar limite de trades por par
             if self._pair_trade_count.get(pair, 0) >= self.max_trades_per_pair.value:
-                return False, f"Limite de trades por par atingido ({self.max_trades_per_pair.value})"
+                self.log_strategy_event(f"Limite de trades por par atingido para {pair}", "WARNING")
+                return False
 
             # Verificar cooldown
             cooldown_key = f"{pair}_{current_time.strftime('%Y%m%d')}"
             if self._last_trade_info.get(cooldown_key, 0) > current_time.timestamp():
-                return False, "Cooldown ativo para este par"
+                self.log_strategy_event(f"Cooldown ativo para {pair}", "WARNING")
+                return False
 
             # Verificar amount mínimo
             if amount < 10:  # USDT mínimo
-                return False, "Amount muito pequeno"
+                self.log_strategy_event(f"Amount muito pequeno {amount} para {pair}", "WARNING")
+                return False
 
             # Registrar trade para cooldown
             cooldown_until = (current_time + timedelta(minutes=self.cooldown_candles.value * 15)).timestamp()
@@ -574,15 +579,15 @@ class SafeTemplateStrategy(IStrategy):
 
             self.log_strategy_event(f"Trade confirmado para {pair}: {amount:.2f} @ {rate:.6f}")
 
-            return True, None
+            return True
 
         except Exception as e:
             self.log_strategy_event(f"Erro em confirm_trade_entry: {e}", "ERROR")
-            return False, f"Erro interno: {str(e)}"
+            return False
 
     def confirm_trade_exit(self, pair: str, trade: Trade, order_type: str, amount: float,
-                         rate: float, time_in_force: str, current_time: datetime,
-                         exit_reason: str, **kwargs) -> Tuple[bool, Optional[str]]:
+                         rate: float, time_in_force: str, exit_reason: str,
+                         current_time: datetime, **kwargs) -> bool:
         """
         Confirmação final antes da saída
 
@@ -593,25 +598,25 @@ class SafeTemplateStrategy(IStrategy):
             amount: Quantidade
             rate: Taxa
             time_in_force: Tempo em força
-            current_time: Tempo atual
             exit_reason: Razão da saída
+            current_time: Tempo atual
 
         Returns:
-            Tuple (confirmar, razão)
+            True se confirmar, False caso contrário
         """
 
         try:
             # Log do trade sendo fechado
-            profit_pct = trade.calc_profit_ratio()
+            profit_pct = trade.calc_profit_ratio(rate)
             self.log_strategy_event(
                 f"Trade exit confirmed for {pair}: {exit_reason}, Profit: {profit_pct:.2%}"
             )
 
-            return True, None
+            return True
 
         except Exception as e:
             self.log_strategy_event(f"Erro em confirm_trade_exit: {e}", "ERROR")
-            return False, f"Erro interno: {str(e)}"
+            return False
 
     def informave_pair_trade(self, pair: str, trade: Trade, current_time: datetime,
                            **kwargs) -> None:
@@ -625,9 +630,9 @@ class SafeTemplateStrategy(IStrategy):
         """
 
         try:
-            profit_pct = trade.calc_profit_ratio()
+            # Log simples sem cálculo de PnL (evitar problemas de assinatura)
             self.log_strategy_event(
-                f"Trade active: {pair}, PnL: {profit_pct:.2%}, "
+                f"Trade active: {pair}, "
                 f"Open time: {trade.open_date.strftime('%H:%M:%S')}"
             )
 

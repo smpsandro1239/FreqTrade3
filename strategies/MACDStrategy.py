@@ -160,7 +160,7 @@ class MACDStrategy(IStrategy):
             dataframe['rsi'] = ta.RSI(dataframe, timeperiod=self.rsi_period.value)
 
             # Volume moving average para confirmação
-            dataframe['volume_ma'] = ta.SMA(dataframe['volume'], timeperiod=self.volume_ma_period.value)
+            dataframe['volume_ma'] = ta.SMA(dataframe, timeperiod=self.volume_ma_period.value)
             dataframe['volume_ratio'] = dataframe['volume'] / dataframe['volume_ma']
 
             # Bollinger Bands para volatilidade
@@ -175,8 +175,8 @@ class MACDStrategy(IStrategy):
             dataframe['bb_lower'] = bb_lower
 
             # Additional momentum indicators
-            dataframe['momentum'] = ta.MOM(dataframe['close'], timeperiod=10)
-            dataframe['roc'] = ta.ROC(dataframe['close'], timeperiod=5)
+            dataframe['momentum'] = ta.MOM(dataframe, timeperiod=10)
+            dataframe['roc'] = ta.ROC(dataframe, timeperiod=5)
 
             # MACD crossover signals
             dataframe['macd_bullish_cross'] = (
@@ -367,7 +367,8 @@ class MACDStrategy(IStrategy):
         return dataframe
 
     def custom_stake_amount(self, pair: str, current_time: datetime, current_rate: float,
-                          proposed_stake: float, min_stake: float, max_stake: float, **kwargs) -> float:
+                          proposed_stake: float, min_stake: Optional[float], max_stake: Optional[float],
+                          leverage: float, entry_tag: Optional[str], side: str, **kwargs) -> float:
         """
         Calcula stake amount com gestão de risco MACD
 
@@ -378,6 +379,9 @@ class MACDStrategy(IStrategy):
             proposed_stake: Stake proposto
             min_stake: Stake mínimo
             max_stake: Stake máximo
+            leverage: Alavancagem
+            entry_tag: Tag de entrada
+            side: Lado (buy/sell)
 
         Returns:
             Stake amount ajustado para estratégia MACD
@@ -390,8 +394,9 @@ class MACDStrategy(IStrategy):
                 return 0
 
             # Conservative sizing for momentum strategy
-            max_allowed = max_stake * 0.03  # Máximo 3% por trade
-            proposed_stake = min(proposed_stake, max_allowed)
+            if max_stake and max_stake > 0:
+                max_allowed = max_stake * 0.03  # Máximo 3% por trade
+                proposed_stake = min(proposed_stake, max_allowed)
 
             # Minimum stake for MACD strategy
             if proposed_stake < 20:  # USDT mínimo
@@ -403,9 +408,12 @@ class MACDStrategy(IStrategy):
             self.log_strategy_event(f"Erro em custom_stake_amount MACD: {e}", "ERROR")
             return 0
 
-    def bot_loop_start(self, **kwargs) -> None:
+    def bot_loop_start(self, current_time: datetime, **kwargs) -> None:
         """
         Executado no início de cada loop do bot - MACD specific
+
+        Args:
+            current_time: Tempo atual
         """
 
         try:
@@ -426,7 +434,7 @@ class MACDStrategy(IStrategy):
 
     def confirm_trade_entry(self, pair: str, order_type: str, amount: float, rate: float,
                           time_in_force: str, current_time: datetime, entry_tag: Optional[str],
-                          side: str, **kwargs) -> Tuple[bool, Optional[str]]:
+                          side: str, **kwargs) -> bool:
         """
         Confirmação final para entrada MACD
 
@@ -441,28 +449,30 @@ class MACDStrategy(IStrategy):
             side: Lado
 
         Returns:
-            Tuple (confirmar, razão)
+            True se confirmar, False caso contrário
         """
 
         try:
             # Check trade limits
             if self._pair_trade_count.get(pair, 0) >= self.max_trades_per_pair.value:
-                return False, f"Limite de trades MACD por par: {self.max_trades_per_pair.value}"
+                self.log_strategy_event(f"Limite de trades MACD por par atingido para {pair}", "WARNING")
+                return False
 
             # Check minimum amount
             if amount < 20:  # USDT mínimo para MACD
-                return False, "Amount insuficiente para estratégia MACD"
+                self.log_strategy_event(f"Amount insuficiente para estratégia MACD: {amount}", "WARNING")
+                return False
 
             # Log confirmation
             self.log_strategy_event(
                 f"MACD trade confirmado para {pair}: {amount:.2f} @ {rate:.6f}"
             )
 
-            return True, None
+            return True
 
         except Exception as e:
             self.log_strategy_event(f"Erro em MACD confirm_trade_entry: {e}", "ERROR")
-            return False, f"Erro interno MACD: {str(e)}"
+            return False
 
     def check_exit_signal(self, pair: str, trade: Trade, current_time: datetime, current_rate: float,
                          current_profit: float, min_stake: Optional[float], **kwargs) -> Optional[pd.Series]:

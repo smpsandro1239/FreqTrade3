@@ -183,7 +183,7 @@
     "max_drawdown": 0.2
   },
 
-  "g fasten-rate-limit": {
+  "fasten-rate-limit": {
     "enabled": true,
     "rate_limit": 30,
     "stagger": 0.05
@@ -207,7 +207,7 @@
 
   "trading_mode": "spot",
   "experimental": {
-    "s Candles_timeframe_parsing": false
+    "ignore_roi_time_defined_candles": false
   },
 
   "security": {

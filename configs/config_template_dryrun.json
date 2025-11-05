@@ -1,12 +1,11 @@
 {
-  "_comment": "===============================================",
+  "_comment": "FreqTrade3 - Dry Run Configuration",
   "_template": "Dry Run - Modo de Teste Seguro",
   "_description": "Configuração segura para testes sem dinheiro real",
   "_environment": "DRY_RUN",
   "_safety_level": "MAXIMUM",
   "_created": "2025-11-05",
   "_warning": "ESTA CONFIGURAÇÃO É 100% SEGURA - NÃO USA DINHEIRO REAL",
-  "===============================================",
   "common": {
     "timeframe": "15m",
     "stake_currency": "USDT",
@@ -21,7 +20,7 @@
   "dry_run_wallet": 10000.0,
   "max_open_trades": 3,
   "amend_last_stake_amount": true,
-  "stoploss": -0.10,
+  "stoploss": -0.1,
   "trailing_stop": false,
   "trailing_stop_positive": 0.02,
   "trailing_stop_positive_offset": 0.01,
@@ -67,11 +66,7 @@
   ],
   "bot_name": "FreqTrade3_DryRun",
   "strategy": "template_strategy",
-  "strategies": [
-    "template_strategy",
-    "EMA200RSI",
-    "MACDStrategy"
-  ],
+  "strategies": ["template_strategy", "EMA200RSI", "MACDStrategy"],
   "api_server": {
     "enabled": true,
     "listen_ip_address": "127.0.0.1",
@@ -99,12 +94,12 @@
     "format": "json",
     "retries": 3,
     "retry_delay": 3.0,
-    "mathevent": true,
+    "match_event": true,
     "exit_event": true,
     "entry_event": true,
     "custom_events": []
   },
-  " prohibitions": {
+  "prohibitions": {
     "no_trading_until": null,
     "blacklist": [],
     "whitelist": []
@@ -115,7 +110,7 @@
     "stake_amount": 100,
     "fee": 0.001,
     "fill_db_sqlite": false,
-    "stoploss": -0.10,
+    "stoploss": -0.1,
     "trailing_stop": false,
     "trailing_stop_positive": 0.02,
     "trailing_stop_positive_offset": 0.01
@@ -125,16 +120,15 @@
     "process_these_pairs": [],
     "stake_amountMultiplier": 1.0,
     "stop_loss_percent": 0.8,
-    "maximum_win_rate": 0.80,
-    "minimum_expected_profit": 0.20
+    "maximum_win_rate": 0.8,
+    "minimum_expected_profit": 0.2
   },
   "hyperopt": {
     "epochs": 100,
     "spaces": "buy",
-    "loss": "ShortTrade督查DBSell",
+    "loss": "OnlyProfitDrawDown",
     "min_date": null,
     "max_date": null,
-    "loss": "OnlyProfitDrawDown",
     "enable_protections": true,
     "protection_time_limit": 1,
     "protection_time_limit_mode": 1,

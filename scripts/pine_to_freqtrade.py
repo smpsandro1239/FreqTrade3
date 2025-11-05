@@ -280,7 +280,7 @@ Conversão automática realizada em: {Path().cwd()}
 AVISO: Teste extensivamente antes de usar com dinheiro real!
 """
 
-import freqtrade.vendor.qtpylib.indicators as qtpylib
+import talib.abstract as ta
 from freqtrade.strategy import IStrategy, IntParameter, DecimalParameter
 import talib.abstract as ta
 import pandas as pd

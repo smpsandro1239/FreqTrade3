@@ -1,0 +1,34 @@
+# FreqTrade Core
+freqtrade>=2024.1
+
+# Backup & Security
+cryptography>=3.4.8
+schedule>=1.2.0
+
+# Web Interface (FreqUI)
+flask>=2.3.0
+flask-cors>=4.0.0
+flask-socketio>=5.3.0
+plotly>=5.15.0
+
+# HTTP & Communication
+requests>=2.31.0
+websockets>=11.0.0
+
+# Data & Analysis
+numpy>=1.24.0
+pandas>=2.0.0
+
+# Development & Testing
+pytest>=7.4.0
+black>=23.7.0
+flake8>=6.0.0
+
+# Optional: Enhanced Charts
+dash>=2.12.0
+
+# Optional: Notifications
+python-telegram-bot>=20.0
+
+# Optional: Email (Python built-in smtplib is used)
+# No additional package needed

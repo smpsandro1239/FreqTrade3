@@ -26,6 +26,7 @@ import gzip
 import hashlib
 import json
 import logging
+import logging.handlers
 import os
 import shutil
 import sqlite3
@@ -461,7 +462,10 @@ class SecureBackupSystem:
 
             with tarfile.open(fileobj=tar_buffer, mode='r:gz') as tar:
                 manifest_file = tar.getmember('manifest.json')
-                manifest_content = tar.extractfile(manifest_file).read()
+                manifest_file_obj = tar.extractfile(manifest_file)
+                if manifest_file_obj is None:
+                    raise ValueError("Não foi possível extrair manifesto do backup")
+                manifest_content = manifest_file_obj.read()
                 return json.loads(manifest_content.decode('utf-8'))
 
         except Exception as e:
@@ -501,7 +505,11 @@ class SecureBackupSystem:
                     return False
 
                 manifest_file = tar.getmember('manifest.json')
-                manifest_content = tar.extractfile(manifest_file).read()
+                manifest_file_obj = tar.extractfile(manifest_file)
+                if manifest_file_obj is None:
+                    self.logger.error("Não foi possível extrair manifesto do backup")
+                    return False
+                manifest_content = manifest_file_obj.read()
                 manifest = json.loads(manifest_content.decode('utf-8'))
 
                 # Verificar todos os arquivos no tarball
@@ -514,7 +522,9 @@ class SecureBackupSystem:
                     if member.isfile():
                         try:
                             # Tentar ler o arquivo
-                            tar.extractfile(member).read()
+                            member_file = tar.extractfile(member)
+                            if member_file is not None:
+                                member_file.read()
                             verification_results.append((member.name, True, "OK"))
                         except Exception as e:
                             verification_results.append((member.name, False, str(e)))
@@ -597,7 +607,11 @@ class SecureBackupSystem:
             with tarfile.open(fileobj=tar_buffer, mode='r:gz') as tar:
                 # Extrair manifesto para log
                 manifest_file = tar.getmember('manifest.json')
-                manifest_content = tar.extractfile(manifest_file).read()
+                manifest_file_obj = tar.extractfile(manifest_file)
+                if manifest_file_obj is None:
+                    self.logger.error("Não foi possível extrair manifesto do backup")
+                    return False
+                manifest_content = manifest_file_obj.read()
                 manifest = json.loads(manifest_content.decode('utf-8'))
 
                 # Extrair arquivos

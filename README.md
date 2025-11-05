@@ -3,8 +3,11 @@
 <div align="center">
 
 ![FreqTrade3](https://img.shields.io/badge/FreqTrade3-v3.0-blue.svg)
+
 ![Python](https://img.shields.io/badge/Python-3.8+-green.svg)
+
 ![License](https://img.shields.io/badge/License-MIT-yellow.svg)
+
 ![Security](https://img.shields.io/badge/Security-Maximum-red.svg)
 
 **Sistema completo de trading algorítmico com interface TradingView, backtesting avançado e máximo nível de segurança.**
@@ -16,6 +19,7 @@
 ## 🎯 CARACTERÍSTICAS PRINCIPAIS
 
 ### 🔒 Segurança Máxima
+
 - ✅ Templates de configuração seguros por padrão
 - ✅ Proteção automática de credenciais
 - ✅ Sistema de dry-run obrigatório
@@ -23,6 +27,7 @@
 - ✅ Backup automático de dados sensíveis
 
 ### 📊 Interface TradingView Integrada (FreqUI)
+
 - 🎨 Gráficos idênticos ao TradingView
 - 📈 Velas, indicadores e trades em tempo real
 - 🔍 Zoom, pan e cross-hair interativo
@@ -30,6 +35,7 @@
 - 🎯 Alertas visuais e sonoros
 
 ### 🧠 Estratégias Avançadas
+
 - 📚 Centenas de estratégias pré-otimizadas
 - 🔄 Conversor automático Pine Script → Python
 - ⚡ Otimização automática de parâmetros
@@ -37,6 +43,7 @@
 - 🎯 Backtesting multi-timeframe
 
 ### 🚨 Sistema de Alertas
+
 - 🔔 Notificações em tempo real
 - 📱 Telegram/Discord/Email
 - 📊 Métricas de performance
@@ -88,6 +95,7 @@ pip install -U "freqtrade[all]"
 
 # 4. Verificar instalação
 freqtrade --version
+
 freqtrade install-ui
 ```
 
@@ -141,6 +149,7 @@ freqtrade trade --strategy SuaEstrategia --ui-enable
 ```
 
 ### Recursos do FreqUI
+
 - **Charts**: Gráficos em tempo real com indicadores
 - **Trades**: Histórico de trades executados
 - **Dashboard**: Métricas e performance em tempo real
@@ -161,6 +170,7 @@ freqtrade trade --ui-enable --ui-ssl
 ### Estratégias Incluídas
 
 #### 1. EMA-200 + RSI (Conservative)
+
 ```bash
 # Backtest
 freqtrade backtesting --strategy EMA200RSI --timerange 20240101-20241101
@@ -170,11 +180,13 @@ freqtrade trade --strategy EMA200RSI --ui-enable
 ```
 
 #### 2. MACD Crossover (Medium Risk)
+
 ```bash
 freqtrade backtesting --strategy MACDStrategy --timerange 20240101-20241101
 ```
 
 #### 3. Bollinger Bands + Stochastic (Aggressive)
+
 ```bash
 freqtrade backtesting --strategy BollingerRSI --timerange 20240101-20241101
 ```
@@ -269,6 +281,7 @@ freqtrade plot-dataframe --strategy EMA200RSI --indicators1 ema_fast,ema_slow
 ## 🛠️ COMANDOS ESSENCIAIS
 
 ### Trading
+
 ```bash
 # Trading em modo seguro (dry-run)
 freqtrade trade --strategy EMA200RSI
@@ -284,6 +297,7 @@ freqtrade status
 ```
 
 ### Gestão de Dados
+
 ```bash
 # Baixar dados históricos
 freqtrade download-data --pairs BTC/USDT ETH/USDT --timeframes 1h 4h
@@ -293,10 +307,12 @@ freqtrade clean-data
 
 # Listar dados disponíveis
 freqtrade list-timeframes
+
 freqtrade list-pairs --exchange binance
 ```
 
 ### Backtesting e Otimização
+
 ```bash
 # Backtesting completo
 freqtrade backtesting --strategy-list EMA200RSI MACDStrategy
@@ -342,18 +358,21 @@ FreqTrade3/
 ## ⚡ FEATURES AVANÇADAS
 
 ### 🤖 Trading Automático Multi-Exchange
+
 - Suporte a 20+ exchanges
 - Arbitragem automática
 - Rebalanceamento de portfólio
 - Gestão automática de risco
 
 ### 📊 Análise Técnica Avançada
+
 - 100+ indicadores técnicos
 - Análise multi-timeframe
 - Detecção de padrões automatizada
 - Machine Learning integrado
 
 ### 🔐 Segurança Institucional
+
 - Criptografia de dados sensíveis
 - Autenticação 2FA obrigatória
 - Logs de auditoria completos
@@ -364,6 +383,7 @@ FreqTrade3/
 ### Problemas Comuns
 
 #### Erro: "API key inválida"
+
 ```bash
 # Verificar credenciais
 freqtrade test-pairlist --exchange binance
@@ -373,6 +393,7 @@ freqtrade test-pairlist --exchange binance
 ```
 
 #### Erro: "Dry run mode is disabled"
+
 ```bash
 # Verificar configuração
 grep "dry_run" config.json
@@ -380,6 +401,7 @@ grep "dry_run" config.json
 ```
 
 #### FreqUI não carrega
+
 ```bash
 # Verificar instalação
 freqtrade test-ui
@@ -389,6 +411,7 @@ pip install -U "freqtrade[all]"
 ```
 
 ### Logs e Debugging
+
 ```bash
 # Ver logs em tempo real
 tail -f logs/freqtrade.log
