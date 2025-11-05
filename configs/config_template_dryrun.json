@@ -1,0 +1,281 @@
+{
+  "_comment": "===============================================",
+  "_template": "Dry Run - Modo de Teste Seguro",
+  "_description": "Configuração segura para testes sem dinheiro real",
+  "_environment": "DRY_RUN",
+  "_safety_level": "MAXIMUM",
+  "_created": "2025-11-05",
+  "_warning": "ESTA CONFIGURAÇÃO É 100% SEGURA - NÃO USA DINHEIRO REAL",
+  "===============================================",
+  "common": {
+    "timeframe": "15m",
+    "stake_currency": "USDT",
+    "stake_amount": 100,
+    "unfilledtimeout": {
+      "entry": 30,
+      "exit": 30
+    },
+    "startup_candles": 30
+  },
+  "dry_run": true,
+  "dry_run_wallet": 10000.0,
+  "max_open_trades": 3,
+  "amend_last_stake_amount": true,
+  "stoploss": -0.10,
+  "trailing_stop": false,
+  "trailing_stop_positive": 0.02,
+  "trailing_stop_positive_offset": 0.01,
+  "trailing_only_offset_is_reached": true,
+  "internals": {
+    "interval": 60,
+    "sd_notification": true
+  },
+  "stake_currency": "USDT",
+  "exchange": {
+    "name": "binance",
+    "key": "YOUR_API_KEY_HERE",
+    "secret": "YOUR_API_SECRET_HERE",
+    "ccxt_config": {
+      "enableRateLimit": true,
+      "rateLimit": 200
+    },
+    "ccxt_async_config": {
+      "enableRateLimit": true,
+      "rateLimit": 200
+    },
+    "dry_run": true
+  },
+  "pair_whitelist": [
+    "BTC/USDT",
+    "ETH/USDT",
+    "BNB/USDT",
+    "ADA/USDT",
+    "XRP/USDT",
+    "SOL/USDT",
+    "DOT/USDT",
+    "MATIC/USDT",
+    "AVAX/USDT",
+    "LINK/USDT"
+  ],
+  "pair_blacklist": [
+    "BTC/PAX",
+    "BTC/USDC",
+    "ETH/USDC",
+    "BNB/PAX",
+    "BNB/BUSD",
+    "BTC/BUSD"
+  ],
+  "bot_name": "FreqTrade3_DryRun",
+  "strategy": "template_strategy",
+  "strategies": [
+    "template_strategy",
+    "EMA200RSI",
+    "MACDStrategy"
+  ],
+  "api_server": {
+    "enabled": true,
+    "listen_ip_address": "127.0.0.1",
+    "listen_port": 8080,
+    "username": "freqtrade3",
+    "password": "CHANGE_THIS_SECURE_PASSWORD",
+    "jwt_secret_key": "CHANGE_THIS_JWT_SECRET_KEY",
+    "CORS_origins": ["http://localhost:8080", "http://127.0.0.1:8080"],
+    "verbosity": 3,
+    "logfile": "logs/freqtrade3-ui.log"
+  },
+  "telegram": {
+    "enabled": false,
+    "token": "",
+    "chat_id": "",
+    "keyboard": []
+  },
+  "discord": {
+    "enabled": false,
+    "webhook_url": ""
+  },
+  "webhook": {
+    "enabled": false,
+    "url": "",
+    "format": "json",
+    "retries": 3,
+    "retry_delay": 3.0,
+    "mathevent": true,
+    "exit_event": true,
+    "entry_event": true,
+    "custom_events": []
+  },
+  " prohibitions": {
+    "no_trading_until": null,
+    "blacklist": [],
+    "whitelist": []
+  },
+  "backtesting": {
+    "startup_candles": 30,
+    "max_open_trades": 3,
+    "stake_amount": 100,
+    "fee": 0.001,
+    "fill_db_sqlite": false,
+    "stoploss": -0.10,
+    "trailing_stop": false,
+    "trailing_stop_positive": 0.02,
+    "trailing_stop_positive_offset": 0.01
+  },
+  "edge": {
+    "enabled": false,
+    "process_these_pairs": [],
+    "stake_amountMultiplier": 1.0,
+    "stop_loss_percent": 0.8,
+    "maximum_win_rate": 0.80,
+    "minimum_expected_profit": 0.20
+  },
+  "hyperopt": {
+    "epochs": 100,
+    "spaces": "buy",
+    "loss": "ShortTrade督查DBSell",
+    "min_date": null,
+    "max_date": null,
+    "loss": "OnlyProfitDrawDown",
+    "enable_protections": true,
+    "protection_time_limit": 1,
+    "protection_time_limit_mode": 1,
+    "use_max_comments": 5,
+    "max_comments": 10,
+    "max_secs_per_inner_cycle": 600,
+    "enable_conservative": true,
+    "conservative_level": 1.0
+  },
+  "bot_loop_startup_delay_seconds": 15,
+  "force_entry_enable": false,
+  "auto_pair_selection": {
+    "enabled": false,
+    "process_these_candle_types": ["spot", "futures"],
+    "process_these_timeframes": ["5m", "15m", "1h", "4h", "1d"],
+    "seconds_candles_consistency": 60
+  },
+  "ewo": {
+    "enabled": false,
+    "ewo_high": 2.0,
+    "ewo_low": -3.0,
+    "ewo_high_delta": 0.4,
+    "ewo_low_delta": 1.1,
+    "enabled_profit_target": true,
+    "profit_target": 6.5,
+    "enabled_protection": true,
+    "protection_time": 36,
+    "max_safety_trades_lookback": 30,
+    "safety_trade_threshold": -0.025,
+    "safety_trade_execution_delay": 5,
+    "protection_order_lookback_candles": 30,
+    "base_nb_candles_sell": 30,
+    "low_offset": 0.01,
+    "high_offset": 0.01
+  },
+  "security": {
+    "environment": "DRY_RUN",
+    "safety_mode": true,
+    "alert_level": "HIGH",
+    "log_all_actions": true,
+    "audit_file": "logs/security_audit.log",
+    "whitelist_checking": true,
+    "blacklist_checking": true,
+    "api_key_validation": true,
+    "network_security": true
+  },
+  "logging": {
+    "version": 1,
+    "disable_existing_loggers": false,
+    "formatters": {
+      "default": {
+        "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+      },
+      "colored": {
+        "()": "colorlog.ColoredFormatter",
+        "format": "%(log_color)s%(levelname)-8s%(reset)s %(blue)s%(name)s: %(message)s",
+        "log_colors": {
+          "DEBUG": "cyan",
+          "INFO": "green",
+          "WARNING": "yellow",
+          "ERROR": "red",
+          "CRITICAL": "red,bg_white"
+        }
+      },
+      "min_formatter": {
+        "format": "%(asctime)s: %(message)s",
+        "datefmt": "%H:%M:%S"
+      }
+    },
+    "handlers": {
+      "console": {
+        "class": "logging.StreamHandler",
+        "level": "INFO",
+        "formatter": "default",
+        "stream": "ext://sys.stdout"
+      },
+      "file": {
+        "class": "logging.handlers.RotatingFileHandler",
+        "level": "DEBUG",
+        "formatter": "colored",
+        "filename": "logs/freqtrade3.log",
+        "maxBytes": 10485760,
+        "backupCount": 10
+      },
+      "file_stderr": {
+        "class": "logging.handlers.RotatingFileHandler",
+        "level": "ERROR",
+        "formatter": "colored",
+        "filename": "logs/freqtrade3_errors.log",
+        "maxBytes": 10485760,
+        "backupCount": 5
+      },
+      "file_webhook": {
+        "class": "logging.handlers.RotatingFileHandler",
+        "level": "INFO",
+        "formatter": "min_formatter",
+        "filename": "logs/webhook.log",
+        "maxBytes": 10485760,
+        "backupCount": 5
+      }
+    },
+    "root": {
+      "level": "INFO",
+      "handlers": ["console", "file"]
+    },
+    "loggers": {
+      "FreqTrade": {
+        "level": "DEBUG",
+        "handlers": ["file", "file_stderr"],
+        "propagate": false
+      },
+      "freqtrade.strategy.interface": {
+        "level": "INFO",
+        "handlers": ["file"],
+        "propagate": false
+      },
+      "freqtrade.strategy": {
+        "level": "INFO",
+        "handlers": ["file"],
+        "propagate": false
+      },
+      "freqtrade.edge": {
+        "level": "INFO",
+        "handlers": ["file"],
+        "propagate": false
+      },
+      "freqtrade.optimize": {
+        "level": "INFO",
+        "handlers": ["file"],
+        "propagate": false
+      },
+      "freqtrade.freqtradebot": {
+        "level": "INFO",
+        "handlers": ["file"],
+        "propagate": false
+      },
+      "freqtrade.rpc.webhook": {
+        "level": "INFO",
+        "handlers": ["file_webhook"],
+        "propagate": false
+      }
+    }
+  }
+}

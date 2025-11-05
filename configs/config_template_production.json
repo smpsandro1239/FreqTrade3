@@ -1,0 +1,232 @@
+{
+  "_meta": {
+    "template_version": "3.0",
+    "template_type": "production_server",
+    "security_level": "maximum",
+    "description": "Template para servidores de produção dedicados",
+    "⚠️ WARNING": "PARA SERVIDORES DEDICADOS - MÁXIMA SEGURANÇA"
+  },
+
+  "server": {
+    "bind_ip": "0.0.0.0",
+    "allow_ip": ["127.0.0.1", "192.168.1.0/24", "10.0.0.0/8"],
+    "https": {
+      "enabled": true,
+      "cert_file": "/etc/ssl/certs/freqtrade.crt",
+      "key_file": "/etc/ssl/private/freqtrade.key"
+    }
+  },
+
+  "exchange": {
+    "name": "binance",
+    "key": "${BINANCE_API_KEY}",
+    "secret": "${BINANCE_SECRET}",
+    "ccxt_config": {
+      "enableRateLimit": true,
+      "options": {
+        "defaultType": "spot"
+      }
+    },
+    "ccxt_async_config": {
+      "enableRateLimit": true,
+      "rateLimit": 200
+    }
+  },
+
+  "dry_run": false,
+  "dry_run_wallet": 50000,
+
+  "max_open_trades": 10,
+  "stake_amount": 100,
+  "tradable_balance_ratio": 0.9,
+  "stake_currency": "USDT",
+
+  "stoploss": -0.008,
+  "trailing_stop": true,
+  "trailing_stop_positive": 0.003,
+  "trailing_stop_positive_offset": 0.008,
+
+  "minimal_roi": {
+    "0": 0.015,
+    "15": 0.008,
+    "30": 0.004,
+    "90": 0
+  },
+
+  "unfilledtimeout": {
+    "buy": 3,
+    "sell": 10
+  },
+
+  "process_only_new_candles": true,
+  "startup_candles": 100,
+
+  "pair_whitelist": [
+    "BTC/USDT",
+    "ETH/USDT",
+    "BNB/USDT",
+    "ADA/USDT",
+    "DOT/USDT",
+    "LINK/USDT",
+    "LTC/USDT",
+    "XRP/USDT",
+    "SOL/USDT",
+    "MATIC/USDT",
+    "ATOM/USDT",
+    "AVAX/USDT",
+    "UNI/USDT",
+    "AAVE/USDT",
+    "SUSHI/USDT"
+  ],
+
+  "pair_blacklist": [
+    "BTC/USDT.*UP",
+    "BTC/USDT.*DOWN",
+    ".*/BUSD",
+    ".*/USDC",
+    "BTC/USDT:USD",
+    "ETH/USDT:USD"
+  ],
+
+  "data_source_3rd_party": {
+    "name": "ccxt"
+  },
+
+  "update_timeout": 0.5,
+
+  "api_server": {
+    "enabled": true,
+    "listen_ip_address": "0.0.0.0",
+    "listen_port": 8080,
+    "username": "${API_USERNAME}",
+    "password": "${API_PASSWORD}",
+    "jwt_secret_key": "${JWT_SECRET}"
+  },
+
+  "webhook": {
+    "enabled": true,
+    "url": "${WEBHOOK_URL}",
+    "format": "json",
+    "retries": 3,
+    "timeout": 30
+  },
+
+  "telegram": {
+    "enabled": true,
+    "token": "${TELEGRAM_BOT_TOKEN}",
+    "chat_id": "${TELEGRAM_CHAT_ID}",
+    "keyboard": [
+      [{ "text": "/daily" }, { "text": "/profit" }, { "text": "/balance" }],
+      [{ "text": "/count" }, { "text": "/status" }, { "text": "/start" }],
+      [{ "text": "/stop" }, { "text": "/leave" }]
+    ]
+  },
+
+  "notifications": {
+    "trade_enter": true,
+    "trade_exit": true,
+    "trade_cancel": true,
+    "trade_error": true,
+    "profit": true,
+    "show_candle": "1m",
+    "notification_settings": {
+      "discord": {
+        "enabled": true,
+        "webhook_url": "${DISCORD_WEBHOOK}"
+      },
+      "slack": {
+        "enabled": false,
+        "webhook_url": "${SLACK_WEBHOOK}"
+      }
+    }
+  },
+
+  "log_level": "WARNING",
+  "logfile": "logs/freqtrade_production.log",
+  "log_format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+
+  "ask_order_book": {
+    "enabled": false
+  },
+
+  "bid_order_book": {
+    "enabled": false
+  },
+
+  "protect_future": {
+    "enabled": true,
+    "lookahead": 5
+  },
+
+  "unfilledtimeout_rate_limit": {
+    "enabled": true,
+    "limit": 30
+  },
+
+  "skip_pair_validation": false,
+  "can_short": false,
+  "position_stacking": true,
+  "amount_reserve_percent": 0.5,
+
+  "strategy": "${STRATEGY_NAME}",
+  "strategy_path": "user_data/strategies",
+  "additional_strategy_path": "strategies",
+
+  "edge": {
+    "enabled": true,
+    "process_only_new_candles": true,
+    "price_last": 30,
+    "persistence": 15,
+    "enter_reason": "re_entry",
+    "exit_reason": "roi",
+    "max_trade_duration": 1440,
+    "max_drawdown": 0.2
+  },
+
+  "g fasten-rate-limit": {
+    "enabled": true,
+    "rate_limit": 30,
+    "stagger": 0.05
+  },
+
+  "fee": {
+    "maker": 0.0005,
+    "taker": 0.0005
+  },
+
+  "polling_balance": {
+    "enabled": true,
+    "amount": 1000
+  },
+
+  "api_server_options": {
+    "read_timeout": 15,
+    "write_timeout": 15,
+    "connect_timeout": 15
+  },
+
+  "trading_mode": "spot",
+  "experimental": {
+    "s Candles_timeframe_parsing": false
+  },
+
+  "security": {
+    "database_encryption": true,
+    "api_encryption": true,
+    "log_sanitization": true,
+    "rate_limit_protection": true,
+    "monitoring": {
+      "enabled": true,
+      "health_check_interval": 60,
+      "alert_on_failure": true,
+      "metrics_endpoint": "/health"
+    }
+  },
+
+  "backup": {
+    "enabled": true,
+    "interval": 3600,
+    "retention_days": 30,
+    "location": "/backup/freqtrade"
+  }
+}
