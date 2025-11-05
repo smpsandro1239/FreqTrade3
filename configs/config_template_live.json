@@ -1,0 +1,191 @@
+{
+  "max_open_trades": 3,
+  "stake_currency": "USDT",
+  "stake_amount": 100.0,
+  "tradable_balance_ratio": 0.99,
+  "fiat_display_currency": "USD",
+  "dry_run": false,
+  "dry_run_wallet": 1000.0,
+  "unfilledtimeout": {
+    "buy": 10,
+    "sell": 30,
+    "exit_timeout_count": 0,
+    "exit_timeout_status": "cancel"
+  },
+
+  "protections": {
+    "max_drawdown": {
+      "enabled": true,
+      "max_allowed_drawdown": 0.05,
+      "drawdown_type": "ratio",
+      "lookback_period": 1440,
+      "trade_limit": 30,
+      "stop_after_candles": 5
+    },
+    "max_trades_from_candle_overlap": {
+      "enabled": false,
+      "max_trade_open_after_candles": 2,
+      "lookback_period": 100
+    },
+    "max_loss_streak": {
+      "enabled": true,
+      "max_loss_streak": 3,
+      "lookback_period": 100
+    },
+    "max_consecutive_losses": {
+      "enabled": false,
+      "max_consecutive_losses": 0
+    },
+    "cooldown_period": {
+      "enabled": true,
+      "cooldown_duration": 1440,
+      "lookback_period": 0,
+      "trade_limit": 3
+    },
+    "stoploss_on_exchange": {
+      "enabled": false,
+      "ordertypes": {
+        "stoploss": "market"
+      }
+    },
+    "use_exit_signal": true,
+    "exit_profit_only": false,
+    "ignore_roi_if_buy_signal": false,
+    "position_stacking": false,
+    "max_entry_position_adjustment": -1,
+    "auto_renew": false
+  },
+
+  "protections_config": {
+    "cooldown_candles": 5,
+    "max_trades_per_pair": 2
+  },
+
+  "update_timeout": 30,
+
+  "api_server": {
+    "enabled": true,
+    "bind_ip": "127.0.0.1",
+    "verbosity": "info",
+    "enable_openapi": false,
+    "jwt_secret_key": "freqtrader-secret-key-change-me",
+    "CORS_origins": ["http://127.0.0.1:8080", "http://localhost:8080"],
+    "username": "freqtrader",
+    "password": "freqtrader-password-change-me"
+  },
+
+  "db_url": "sqlite:///trades.sqlite3",
+
+  "recursive_strategy_search": false,
+
+  "process_only_new_candles": true,
+  "process_only_closed_candles": true,
+
+  "telegram": {
+    "enabled": false,
+    "token": "",
+    "chat_id": "",
+    "keyboard": []
+  },
+
+  "discord": {
+    "enabled": false,
+    "webhook_url": ""
+  },
+
+  "webhook": {
+    "enabled": false,
+    "url": "",
+    "format": "json",
+    "retries": 5,
+    "retry_delay": 3,
+    "message_template": {
+      "strategy_type": "StrategyType.SHORT"
+    },
+    "icon_smile": "🥳",
+    "icon_coin": "🪙",
+    "icon_pack": "emoji"
+  },
+
+  "pair_whitelist": [
+    "BTC/USDT",
+    "ETH/USDT",
+    "BNB/USDT",
+    "ADA/USDT",
+    "DOT/USDT",
+    "LINK/USDT",
+    "XRP/USDT",
+    "LTC/USDT",
+    "BCH/USDT"
+  ],
+  "pair_blacklist": ["BNB/ETH", "BTC/ETH", "BTC/USDT"],
+
+  "strategy": "EMA200RSI",
+
+  "minimal_roi": {
+    "0": 0.06,
+    "20": 0.04,
+    "60": 0.02,
+    "120": 0.01,
+    "240": 0.0
+  },
+
+  "stoploss": -0.08,
+
+  "trailing_stop": true,
+  "trailing_stop_positive": 0.02,
+  "trailing_stop_positive_offset": 0.015,
+  "trailing_only_offset_is_reached": true,
+
+  "timeframe": "15m",
+  "startup_candles": 50,
+
+  "order_types": {
+    "buy": "market",
+    "sell": "market",
+    "stoploss": "market",
+    "stoploss_on_exchange": false,
+    "stoploss_on_exchange_interval": 60,
+    "stoploss_on_exchange_limit_ratio": 0.99
+  },
+
+  "fee": {
+    "maker": 0.001,
+    "taker": 0.001,
+    "stake_currency": 0.001,
+    "open_fee_no_rebate": 0.0025,
+    "close_fee_no_rebate": 0.0025,
+    "close_fee_rebate": 0.0
+  },
+
+  "Internals": {
+    "sec": 1,
+    "ms": 1000,
+    "micro": 1000000,
+    "nano": 1000000000
+  },
+
+  "exchange": {
+    "name": "binance",
+    "key": "",
+    "secret": "",
+    "sandbox": false,
+    "ccxt_config": {
+      "enableRateLimit": true,
+      "rateLimit": 50
+    },
+    "ccxt_async_config": {
+      "enableRateLimit": true,
+      "rateLimit": 50
+    }
+  },
+
+  "pair_interval_mappings": ["1m", "5m", "15m", "30m", "1h", "4h"],
+
+  "slicing": {
+    "enabled": false,
+    "slices_count": 2,
+    "max_entry_position_adjustment": 0,
+    "slicing_mode": "ratio"
+  }
+}
