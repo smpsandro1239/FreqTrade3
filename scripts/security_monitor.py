@@ -30,6 +30,7 @@ import hashlib
 import ipaddress
 import json
 import logging
+import logging.handlers
 import os
 import re
 import signal
@@ -531,6 +532,60 @@ Ação Recomendada: Verifique imediatamente o sistema e logs de segurança."""
                         "timestamp": datetime.now().isoformat()
                     })
 
+        return issues
+
+    def _check_exposed_api_keys(self, file_path: Path) -> bool:
+        """Verifica se um arquivo contém chaves de API expostas."""
+        try:
+            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                content = f.read()
+            for category, patterns in self.sensitive_patterns.items():
+                for pattern in patterns:
+                    if re.search(pattern, content, re.IGNORECASE):
+                        return True
+        except Exception:
+            return False
+        return False
+
+    def _log_contains_sensitive_data(self, log_file: Path) -> bool:
+        """Verifica se um arquivo de log contém dados sensíveis."""
+        try:
+            with open(log_file, 'r', encoding='utf-8', errors='ignore') as f:
+                content = f.read()
+            for category, patterns in self.sensitive_patterns.items():
+                for pattern in patterns:
+                    if re.search(pattern, content, re.IGNORECASE):
+                        return True
+        except Exception:
+            return False
+        return False
+
+    def check_config_security(self, config: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Verifica a segurança de uma configuração."""
+        issues = []
+        if not config.get('dry_run', True):
+            issues.append({
+                "type": "CONFIGURATION_VULNERABILITY",
+                "issue": "DRY_RUN_DISABLED",
+                "severity": "CRITICAL",
+                "description": "Dry run is disabled in the configuration.",
+            })
+
+        if config.get('max_open_trades', 3) > 10:
+            issues.append({
+                "type": "CONFIGURATION_VULNERABILITY",
+                "issue": "TOO_MANY_OPEN_TRADES",
+                "severity": "HIGH",
+                "description": "max_open_trades is set to a high value.",
+            })
+
+        if config.get('stoploss', -0.02) > -0.01:
+            issues.append({
+                "type": "CONFIGURATION_VULNERABILITY",
+                "issue": "STOPLOSS_TOO_HIGH",
+                "severity": "HIGH",
+                "description": "Stoploss is set to a very low value (high risk).",
+            })
         return issues
 
     def analyze_logs(self) -> List[Dict]:
