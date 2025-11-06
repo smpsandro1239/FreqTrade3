@@ -7,6 +7,7 @@ Este projeto implementa **trading algorítmico em tempo real** que pode resultar
 ### 🛡️ MEDIDAS DE SEGURANÇA OBRIGATÓRIAS
 
 #### 1. CONFIGURAÇÃO INICIAL SEGURA
+
 - [ ] **NUNCA** usar dados reais sem testes extensivos
 - [ ] Configurar sempre `--dry-run` inicialmente
 - [ ] Usar apenas APIs com permissões de **trading** (sem withdraw)
