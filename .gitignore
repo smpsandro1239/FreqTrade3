@@ -211,3 +211,4 @@ execution_log.txt
 # LICENSE
 # !.env.example
 # !config.template.json
+config_*.json
