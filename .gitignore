@@ -1,408 +1,213 @@
-# =============================================
-# FREQTRADE3 - .GITIGNORE SEGURO
-# =============================================
-# Este arquivo protege todos os dados sensíveis
-# de serem commitados acidentalmente para o GitHub
-#
-# ⚠️ IMPORTANTE: Mantenha sempre atualizado!
-# 📅 Atualizado: 2025-11-05
-# =============================================
+# 🛡️ .gitignore para FreqTrade3 - Proteção de Dados Sensíveis
 
-# =============================================
-# 🔑 CREDENCIAIS E API KEYS
-# =============================================
-# API keys das exchanges
-api_keys_*
-*_api_key*
-*_secret*
-*_password*
-*_token*
-key_*.json
-secrets_*.json
-credentials_*.json
-auth_*.json
-
-# Arquivos de configuração com credenciais
-config_real.json
-config_live.json
-config_production.json
-config_*.json
-!config_template*.json
-!config.json.example
-
-# Variáveis de ambiente
+# === ARQUIVOS COM CREDENCIAIS (NUNCA COMMIT) ===
 .env
 .env.local
 .env.production
-.env.staging
 .env.development
-.env.test
-.environment
-env_vars
-secrets.txt
+.env.staging
+config.json
+secrets.json
+credentials.json
+api_keys.json
 
-# FreqTrade específico
-user_data/config.json
-user_data/secrets.json
-user_data/smartway.json
+# === ARQUIVOS DE LOGS ===
+logs/
+*.log
+*.log.*
+audit.log
+security.log
+trading.log
+api_access.log
+database.log
+error.log
+access.log
 
-# =============================================
-# 📁 DADOS HISTÓRICOS E CACHE
-# =============================================
-# Dados históricos das exchanges
-user_data/data/*.json
-user_data/data/*.csv
-user_data/data/*.pkl
-user_data/data/*.pickle
-user_data/data/exchange_data/
+# === BASE DE DADOS ===
+*.db
+*.sqlite
+*.sqlite3
+freqtrade.db
+trading_data.db
+user_data/db/
+database/
+data.db
 
-# Cache de dados
+# === DADOS DO USUÁRIO ===
+user_data/
+user_data/strategies/*.json
+user_data/plot_html/
+user_data/notebooks/
+user_data/reports/
+backtest_results/
+hyperopt_results/
+
+# === CHAVES E CERTIFICADOS ===
+*.key
+*.pem
+*.p12
+*.pfx
+*.crt
+*.cer
+*.der
+ssl/
+certs/
+certificates/
+keys/
+private/
+
+# === ARQUIVOS DE CONFIGURAÇÃO SENSÍVEL ===
+config_production.json
+config_live.json
+config_real.json
+secrets/
+credentials/
+api_config.json
+binance_config.json
+telegram_config.json
+
+# === ARQUIVOS TEMPORÁRIOS ===
+tmp/
+temp/
+temp/
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+
+# === PYTHON ===
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
 
-# Data directories
-data/
-temp/
-tmp/
-cache/
-*.db
-*.sqlite
-*.sqlite3
+# === NODE.JS (se usar para frontend) ===
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn-integrity
 
-# =============================================
-# 🛡️ LOGS E DEBUG
-# =============================================
-# Logs de trading
-logs/
-*.log
-*.log.*
-debug_*.log
-trading_*.log
-freqtrade_*.log
-
-# Arquivos de debug
-debug.log
-error.log
-trading.log
-backtest.log
-strategy_debug.log
-
-# FreqTrade logs específicos
-user_data/logs/
-*.trades
-*.jsonl
-
-# =============================================
-# 💰 DADOS FINANCEIROS SENSÍVEIS
-# =============================================
-# Portfólios e balances
-portfolio_*.json
-balance_*.json
-wallet_*.json
-account_*.json
-orders_*.json
-trades_*.json
-
-# Dados de profit/loss
-profit_*.csv
-loss_*.csv
-pnl_*.json
-performance_*.json
-
-# =============================================
-# 🔧 CONFIGURAÇÕES LOCAIS
-# =============================================
-# Configurações personalizadas
-local_config.json
-my_config.json
-personal_config.json
-custom_*.json
-
-# IDE e Editor
+# === IDE ===
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
+
+# === SISTEMA ===
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
 
-# Jupyter Notebook
-.ipynb_checkpoints/
-
-# FreqUI específico
-frequi_*.json
-ui_config.json
-
-# =============================================
-# 📊 BACKTESTING E ESTRATÉGIAS
-# =============================================
-# Resultados de backtesting
-backtest_results/
-results/
-test_results/
+# === ARQUIVOS GERAÇÃO AUTOMÁTICA ===
 *.html
-!template_*.html
+*.pdf
+*.png
+*.jpg
+*.jpeg
+*.svg
+generated/
+output/
+charts/
+plots/
 
-# Estratégias personalizadas
-my_strategies/
-custom_strategies/
-secret_strategies/
-private_strategies/
-
-# Otimizações de parâmetros
-hyperopt_results/
-optimization_results/
-best_params.json
-hyperopt_*.json
-
-# =============================================
-# 🔐 CERTIFICADOS E CHAVES
-# =============================================
-# Certificados SSL/TLS
-*.pem
-*.key
-*.crt
-*.cer
-*.der
-*.p12
-*.pfx
-
-# Chaves SSH
-*.pem
-*.key
-id_rsa
-id_dsa
-id_ecdsa
-id_ed25519
-*.pub
-!public_*.key
-
-# =============================================
-# 📱 WEBHOOKS E NOTIFICAÇÕES
-# =============================================
-# Configurações de webhooks
-webhook_*.json
-notification_*.json
-telegram_*.json
-discord_*.json
-slack_*.json
-
-# Tokens de bots
-bot_token_*.txt
-token_*.txt
-webhook_url_*.txt
-
-# =============================================
-# 🌐 PROXY E NETWORK
-# =============================================
-# Configurações de proxy
-proxy_*.json
-network_*.json
-vpn_*.json
-
-# Hostnames e IPs sensíveis
-hosts_private.txt
-servers.txt
-
-# =============================================
-# 🏦 EXCHANGE ESPECÍFICO
-# =============================================
-# Binance
-binance_*.json
-binance_api_*
-bn_*.json
-
-# Kraken
-kraken_*.json
-kraken_*
-krk_*.json
-
-# Coinbase
-coinbase_*.json
-coinbase_*
-cb_*.json
-
-# KuCoin
-kucoin_*.json
-kucoin_*
-kc_*.json
-
-# Bitfinex
-bitfinex_*.json
-bfx_*.json
-
-# BitMex
-bitmex_*.json
-bm_*.json
-
-# FTX
-ftx_*.json
-
-# Bybit
-bybit_*.json
-
-# OKX
-okx_*.json
-
-# =============================================
-# 📈 INDICADORES E FEATURES
-# =============================================
-# Features calculadas
-features_*.pkl
-features_*.pickle
-feature_store/
-
-# Indicadores customizados
-custom_indicators.py
-my_indicators.py
-private_indicators.py
-
-# =============================================
-# 🧪 TESTES E DESENVOLVIMENTO
-# =============================================
-# Testes com dados reais (NUNCA commit!)
-test_real_*
-live_test_*
-real_money_test_*
-
-# Ambiente de desenvolvimento
-dev_config.json
-dev_secrets.json
-development.json
-
-# =============================================
-# 🗄️ DATABASES
-# =============================================
-# Bases de dados locais
-trading_db.sqlite
-freqtrade.db
-*.db
-*.sqlite
-*.sqlite3
-
-# Redis
-dump.rdb
-
-# =============================================
-# 📧 EMAILS E COMUNICAÇÃO
-# =============================================
-# Configurações de email
-smtp_*.json
-email_*.json
-mail_config.json
-
-# =============================================
-# 🎯 ARQUIVOS TEMPORÁRIOS
-# =============================================
-# Arquivos temporários
-*.tmp
-*.temp
-temp/
-tmp/
-.tmp/
-
-# Downloads
-downloads/
-*.download
-partial_*
-
-# Backup files
-*.bak
-*.backup
+# === BACKUP E ARQUIVOS ANTIGOS ===
 backup/
 backups/
+archive/
+old/
+*.backup
+*.bak
 
-# =============================================
-# 🔍 SENSÍVEL - PESQUISAR SEMPRE
-# =============================================
-# Procurar por estos padrões antes de commit
-# API_KEY
-# SECRET
-# PASSWORD
-# TOKEN
-# PRIVATE
-# KEY
-# CREDENTIAL
-# AUTH
+# === DADOS DE MERCADO ===
+market_data/
+historical_data/
+*.csv
+*.json
 
-# =============================================
-# 📱 MOBILE E APPS
-# =============================================
-# Aplicativos mobile companion
-mobile_*.json
-app_*.json
+# === TESTES E DADOS SENSÍVEIS ===
+test_*.py
+*_test.py
+tests/fixtures/
+test_data/
+mock_data/
 
-# =============================================
-# 🚨 EMERGÊNCIA - STOPWORDS
-# =============================================
-# Palavras-chave para busca antes do commit
-# frequencia_contem_uma_destas_palavras:
-# - "api"
-# - "secret"
-# - "key"
-# - "password"
-# - "token"
-# - "private"
-# - "credential"
-# - "auth"
-# - "wallet"
-# - "balance"
-# - "profit"
-# - "loss"
+# === CONTÊINERES ===
+Dockerfile.production
+docker-compose.override.yml
+.dockerignore
 
-# =============================================
-# ✅ ARQUIVOS SEGUROS (PODE COMMIT)
-# =============================================
-# Templates e exemplos (SEMPRE incluir .example ou template_)
-*.example
-template_*
-sample_*
-dummy_*
+# === DEPLOYMENT ===
+.deploy/
+deploy/
+production/
+staging/
+*.env.production
+*.env.staging
 
-# Documentação
-*.md
-README*
-LICENSE
-CHANGELOG*
+# === ARQUIVOS ESPECÍFICOS DO SISTEMA ===
+freqtrade.pid
+freqtrade.lock
+bot.pid
+bot.lock
+running.pid
+*.pid
+*.lock
 
-# Configurações genéricas
-config_template*.json
-.env.example
+# === RELATÓRIOS E OUTPUTS ===
+reports/
+outputs/
+results/
+*.xlsx
+*.csv
+*.json
+!template_*.json
+!example_*.json
 
-# Scripts públicos
-*.sh
-*.py
-*.bat
-*.ps1
+# === WEBHOOKS E CONEXÕES ===
+webhook_keys.json
+connection_config.json
+api_endpoints.json
 
-# =============================================
-# 🔒 VERIFICAÇÃO FINAL
-# =============================================
-# Antes de cada commit, verifique:
-# 1. grep -r "api_key\|secret\|password\|token" .
-# 2. Confirme que não há dados reais
-# 3. Execute: git status
-# 4. Revise todos os arquivos novos
-# 5. Use: git diff --staged
+# === MONITORAMENTO ===
+monitoring_data/
+metrics/
+prometheus_data/
+grafana_data/
 
-# Segurança é responsabilidade de todos!
-# =============================================
+# === CONTAS E USUÁRIOS ===
+users.json
+accounts.json
+balance.json
+portfolio.json
+wallets.json
+
+# === COMANDOS EXECUTADOS ===
+command_history.txt
+execution_log.txt
+
+# === COMENTADO - Exemplos que podem ser commitados ===
+# templates/
+# examples/
+# docs/
+# *.example
+# README.md
+# LICENSE
+# !.env.example
+# !config.template.json
