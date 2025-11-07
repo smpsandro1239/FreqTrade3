@@ -142,8 +142,10 @@ class PineToFreqTradeConverter:
         # Remover comentários de bloco
         code = re.sub(r'/\*.*?\*/', '', code, flags=re.DOTALL)
 
-        # Normalizar espaços e quebras
-        code = re.sub(r'\s+', ' ', code)
+        # Normalizar espaços, mas preservar quebras de linha
+        lines = code.split('\n')
+        lines = [re.sub(r'\s+', ' ', line).strip() for line in lines]
+        code = '\n'.join(lines)
         code = re.sub(r';\s*', '\n', code)
 
         return code.strip()
@@ -243,22 +245,28 @@ class PineToFreqTradeConverter:
         return exit_logic
 
     def _convert_operators(self, logic: str) -> str:
-        """Converte operadores Pine Script para Python"""
-        # Operadores de comparação
-        replacements = {
-            'and': '&',
-            'or': '|',
-            'not': '~',
-            '==': '==',
-            '!=': '!=',
-            '>=': '>=',
-            '<=': '<=',
-            '>': '>',
-            '<': '<'
-        }
+        """Converte operadores Pine Script para Python usando regex"""
+        # Mapeamento de operadores Pine para Python
+        operator_mappings = [
+            (r'\bnot\b', '~'),
+            (r'\band\b', '&'),
+            (r'\bor\b', '|'),
+            (r'==', '=='),
+            (r'!=', '!='),
+            (r'>=', '>='),
+            (r'<=', '<='),
+            (r'>', '>'),
+            (r'<', '<'),
+        ]
 
-        for pine_op, python_op in replacements.items():
-            logic = re.sub(rf'\b{pine_op}\b', python_op, logic, flags=re.IGNORECASE)
+        # Aplicar substituições de forma segura
+        for pine_op, python_op in operator_mappings:
+            try:
+                logic = re.sub(pine_op, python_op, logic, flags=re.IGNORECASE)
+            except re.error as e:
+                # Em caso de erro de regex, manter a lógica original
+                print(f"Erro ao converter operador '{pine_op}': {e}")
+                pass
 
         return logic
 
