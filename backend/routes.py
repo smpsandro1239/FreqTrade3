@@ -39,6 +39,28 @@ def get_market_data(pair):
     except Exception as e:
         return jsonify({'error': str(e)}), 400
 
+@api.route('/api/history')
+def get_history():
+    """Retorna o histórico de velas para o gráfico Lightweight Charts."""
+    pair = request.args.get('pair', 'BTC/USDT')
+    timeframe = request.args.get('timeframe', '15m')
+    limit = int(request.args.get('limit', 500))
+    data = trading_system.get_market_data(pair, timeframe, limit)
+
+    # Formata os dados para a Lightweight Charts
+    formatted_data = [
+        {
+            "time": int(datetime.strptime(d['timestamp'], '%Y-%m-%d %H:%M:%S').timestamp()),
+            "open": d['open'],
+            "high": d['high'],
+            "low": d['low'],
+            "close": d['close'],
+            "volume": d['volume']
+        }
+        for d in data
+    ]
+    return jsonify(formatted_data)
+
 @api.route('/api/indicators/<path:pair>')
 def get_indicators(pair):
     """Obter indicadores técnicos para gráficos"""
@@ -72,7 +94,6 @@ def run_advanced_backtest():
         start_date = data.get('start_date')
         end_date = data.get('end_date')
 
-        # Mapear estratégia para função
         strategy_map = {
             'AdvancedEMA': 'ema_crossover_strategy',
             'RSI_MeanReversion': 'rsi_mean_reversion_strategy',
@@ -81,13 +102,11 @@ def run_advanced_backtest():
 
         strategy_func_name = strategy_map.get(strategy_name, 'ema_crossover_strategy')
 
-        # Executar backtest
         result = advanced_backtest.backtest_strategy(
             strategy_func_name, pair, start_date, end_date, timeframe, 10000.0
         )
 
         if result.get('success'):
-            # Gerar gráfico se disponível
             chart_path = None
             if result.get('backtest_id'):
                 chart_path = advanced_backtest.generate_tradingview_chart(
@@ -128,7 +147,6 @@ def optimize_strategy():
         start_date = data.get('start_date')
         end_date = data.get('end_date')
 
-        # Mapear estratégia para função
         strategy_map = {
             'AdvancedEMA': 'ema_crossover_strategy',
             'RSI_MeanReversion': 'rsi_mean_reversion_strategy'
@@ -136,7 +154,6 @@ def optimize_strategy():
 
         strategy_func_name = strategy_map.get(strategy_name, 'ema_crossover_strategy')
 
-        # Executar otimização
         results = advanced_backtest.optimize_strategy(
             strategy_func_name, pair, start_date, end_date, timeframe
         )

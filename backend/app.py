@@ -1,12 +1,14 @@
 from flask import Flask
+from flask_socketio import SocketIO
 from .routes import api
 from .sockets import start_update_thread
 from .database import init_database
-from .app import socketio
 from dotenv import load_dotenv
 import os
 
 load_dotenv()
+
+socketio = SocketIO(cors_allowed_origins="*")
 
 def create_app():
     app = Flask(__name__, template_folder='../frontend/templates')
