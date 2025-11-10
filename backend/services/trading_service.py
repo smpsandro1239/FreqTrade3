@@ -1,9 +1,6 @@
-from datetime import datetime, timedelta
-import random
-import yfinance as yf
-import numpy as np
-import pandas as pd
+from datetime import datetime
 from ..database import get_trades_from_db, create_manual_order_in_db
+from .exchange_manager import exchange_manager
 
 class AdvancedTradingSystem:
     """Sistema de trading completo com todas as funcionalidades"""
@@ -40,23 +37,28 @@ class AdvancedTradingSystem:
         }
 
     def get_market_data(self, pair, timeframe, limit):
-        """Obter dados de mercado reais"""
+        """Obter dados de mercado da exchange"""
         cache_key = f"{pair}_{timeframe}_{limit}"
         if cache_key in self.market_data_cache:
             return self.market_data_cache[cache_key]
-        try:
-            yf_symbol = pair.replace('/', '-')
-            ticker = yf.Ticker(yf_symbol)
-            end_time = datetime.now()
-            start_time = end_time - timedelta(days=limit)
-            hist = ticker.history(start=start_time, end=end_time, interval=timeframe)
-            if not hist.empty:
-                data = [{'timestamp': index.strftime('%Y-%m-%d %H:%M:%S'), 'open': row['Open'], 'high': row['High'], 'low': row['Low'], 'close': row['Close'], 'volume': row['Volume']} for index, row in hist.iterrows()]
-                self.market_data_cache[cache_key] = data
-                return data
-        except Exception as e:
-            print(f"Error getting market data for {pair}: {e}")
-        return []
+
+        ohlcv = exchange_manager.fetch_ohlcv(pair, timeframe, limit=limit)
+        if not ohlcv:
+            return []
+
+        data = [
+            {
+                'timestamp': datetime.fromtimestamp(item[0] / 1000).strftime('%Y-%m-%d %H:%M:%S'),
+                'open': item[1],
+                'high': item[2],
+                'low': item[3],
+                'close': item[4],
+                'volume': item[5]
+            }
+            for item in ohlcv
+        ]
+        self.market_data_cache[cache_key] = data
+        return data
 
     def get_indicators(self, pair, timeframe, limit):
         """Calcular indicadores técnicos avançados"""
@@ -96,11 +98,11 @@ class AdvancedTradingSystem:
 
     def create_manual_order(self, pair, side, amount, order_type='market', price=None):
         """Criar ordem manual"""
-        current_price = self.get_market_data(pair, self.timeframe, 1)[-1]['close']
-        exec_price = price if order_type == 'limit' and price else current_price
-        trade_id, executed_at = create_manual_order_in_db(pair, side, amount, order_type, price, exec_price)
-        if trade_id:
-            return {'success': True, 'trade_id': trade_id}
+        order = exchange_manager.create_order(pair, order_type, side, amount, price)
+        if order:
+            trade_id, executed_at = create_manual_order_in_db(pair, side, amount, order_type, price, order['price'])
+            if trade_id:
+                return {'success': True, 'trade_id': trade_id}
         return {'success': False, 'error': 'Failed to create manual order'}
 
 trading_system = AdvancedTradingSystem()

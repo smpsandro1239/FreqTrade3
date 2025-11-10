@@ -10,10 +10,11 @@ from plotly.subplots import make_subplots
 from ..database import DB_PATH
 from ..strategies.strategies import ema_crossover_strategy, rsi_mean_reversion_strategy
 from ..utils.indicators import add_technical_indicators
+import optuna
 
 class AdvancedBacktestEngine:
     """
-    Motor de backtesting avançado - SUPERIOR ao FreqTrade original
+    Motor de backtesting avançado com otimização via Optuna.
     """
 
     def __init__(self, db_path: str = DB_PATH):
@@ -313,48 +314,54 @@ class AdvancedBacktestEngine:
             return f"Error: {str(e)}"
 
     def optimize_strategy(self, strategy_func_name, symbol: str, start_date: str, end_date: str,
-                         timeframe: str = '15m', param_ranges: dict = None) -> list:
+                         timeframe: str = '15m', n_trials: int = 100) -> list:
         """
-        Otimização de estratégias usando algoritmo genético
+        Otimização de estratégias usando Optuna.
         """
         try:
-            print(f"Starting optimization for {symbol}...")
-            if param_ranges is None:
-                param_ranges = {
-                    'rsi_period': (10, 20),
-                    'rsi_oversold': (20, 35),
-                    'rsi_overbought': (65, 80),
-                    'ema_fast': (8, 15),
-                    'ema_slow': (20, 30),
-                    'stop_loss_pct': (0.01, 0.05),
-                    'take_profit_pct': (0.02, 0.08)
+            print(f"Iniciando otimização para {symbol} com {n_trials} tentativas...")
+
+            def objective(trial):
+                params = {
+                    'rsi_period': trial.suggest_int('rsi_period', 10, 20),
+                    'rsi_oversold': trial.suggest_int('rsi_oversold', 20, 35),
+                    'rsi_overbought': trial.suggest_int('rsi_overbought', 65, 80),
+                    'ema_fast': trial.suggest_int('ema_fast', 8, 15),
+                    'ema_slow': trial.suggest_int('ema_slow', 20, 30),
+                    'stop_loss_pct': trial.suggest_float('stop_loss_pct', 0.01, 0.05),
+                    'take_profit_pct': trial.suggest_float('take_profit_pct', 0.02, 0.08),
                 }
-            best_results = []
-            for rsi_period in range(param_ranges['rsi_period'][0], param_ranges['rsi_period'][1] + 1, 2):
-                for ema_fast in range(param_ranges['ema_fast'][0], param_ranges['ema_fast'][1] + 1, 2):
-                    for stop_loss in [0.02, 0.03, 0.04]:
-                        params = {
-                            'rsi_period': rsi_period,
-                            'ema_fast': ema_fast,
-                            'ema_slow': 26,
-                            'stop_loss_pct': stop_loss,
-                            'take_profit_pct': stop_loss * 2
-                        }
-                        result = self.backtest_strategy(
-                            strategy_func_name, symbol, start_date, end_date,
-                            timeframe, 10000.0, params
-                        )
-                        if result.get('success'):
-                            score = self.calculate_optimization_score(result['metrics'])
-                            best_results.append({
-                                'params': params,
-                                'score': score,
-                                'metrics': result['metrics']
-                            })
-            best_results.sort(key=lambda x: x['score'], reverse=True)
-            return best_results[:10]
+
+                result = self.backtest_strategy(
+                    strategy_func_name, symbol, start_date, end_date,
+                    timeframe, 10000.0, params
+                )
+
+                if result.get('success'):
+                    score = self.calculate_optimization_score(result['metrics'])
+                    return score
+                return -1  # Retorna um score ruim em caso de falha
+
+            study = optuna.create_study(direction='maximize')
+            study.optimize(objective, n_trials=n_trials)
+
+            best_trials = sorted(study.trials, key=lambda t: t.value, reverse=True)
+
+            # Retorna os 10 melhores resultados
+            return [
+                {
+                    'params': trial.params,
+                    'score': trial.value,
+                    'metrics': self.backtest_strategy(
+                        strategy_func_name, symbol, start_date, end_date,
+                        timeframe, 10000.0, trial.params
+                    )['metrics']
+                }
+                for trial in best_trials[:10]
+            ]
+
         except Exception as e:
-            print(f"Error in optimization: {e}")
+            print(f"Erro na otimização: {e}")
             return []
 
     def calculate_optimization_score(self, metrics: dict) -> float:
